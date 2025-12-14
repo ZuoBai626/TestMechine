@@ -386,6 +386,7 @@ ApplicationWindow {
     SystemParameters{
         id: systemParameter
         anchors.centerIn: root
+        z : 10
         visible: false
     }
 

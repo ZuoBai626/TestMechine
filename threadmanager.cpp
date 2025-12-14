@@ -17,6 +17,22 @@ ThreadManager::ThreadManager(QObject *parent) : QObject(parent)
 {
     m_PLC_Thread = new QThread(this);
     m_PLC = new ModbusControl();
+
+    m_CSV_Thread = new QThread(this);
+
+    // 🌟 1. CSV Logger 初始化和移动到独立线程
+    m_CSV_Logger = new ReadWriteCSV();
+    m_CSV_Logger->moveToThread(m_CSV_Thread);
+    m_CSV_Thread->start(); // 启动 CSV 线程
+
+    // 🌟 关键连接: ModbusControl 的数据信号 转发给 CSV Logger 槽函数
+    connect(m_PLC, &ModbusControl::instantDataReady, m_CSV_Logger, &ReadWriteCSV::cacheInstantData, Qt::QueuedConnection);
+
+    // 3. 连接 CSV 线程控制信号
+    connect(this, &ThreadManager::startCsvLoggingSignal, m_CSV_Logger, &ReadWriteCSV::startLogging, Qt::QueuedConnection);
+    connect(this, &ThreadManager::stopAndSaveCsvSignal, m_CSV_Logger, &ReadWriteCSV::stopAndSaveLog, Qt::QueuedConnection);
+
+
 }
 
 ThreadManager::~ThreadManager()
@@ -67,6 +83,11 @@ void ThreadManager::start_Experiment()
 
     // 🌟 关键: 重置周期计数器
     emit resetCycleCountSignal(); // <-- 在实验开始时发送重置信号
+
+    // 🌟 关键: 重置 Modbus 周期计数器和启动 CSV 记录
+    emit resetCycleCountSignal();
+    emit startCsvLoggingSignal(); // <-- 启动 CSV 记录
+
 }
 
 void ThreadManager::stop_Experiment()
@@ -85,7 +106,7 @@ void ThreadManager::stop_Experiment()
         m_PLC_Thread->quit();
 
         // 3. 安全等待线程退出
-        if (!m_PLC_Thread->wait(/*1000*/)) { // 增加等待时间，确保完成
+        if (!m_PLC_Thread->wait(1000)) { // 增加等待时间，确保完成
             m_PLC_Thread->terminate();
             m_PLC_Thread->wait();
             qWarning() << "ThreadManager: PLC 线程被强制终止。";
@@ -101,6 +122,10 @@ void ThreadManager::stop_Experiment()
         m_chartDataModel.clear();
         emit chartDataModelChanged();
     }
+
+    // 触发 CSV 文件写入操作，这将在 m_CSV_Thread 中执行
+    emit stopAndSaveCsvSignal(); // <-- 停止并保存 CSV
+
 }
 
 void ThreadManager::updateConnectionStatus(bool connected)

@@ -6,6 +6,8 @@
 #include <QVariantMap>
 #include <QVariantList>
 #include "modbuscontrol.h"
+#include "readwritecsv.h"
+
 
 // ChartPoint 结构体
 struct ChartPoint {
@@ -64,6 +66,10 @@ signals:
     // 🌟 新增信号：请求子线程重置周期计数器
     void resetCycleCountSignal();
 
+    // 🌟 新增信号：通知 CSV 记录器开始/停止
+    void startCsvLoggingSignal();
+    void stopAndSaveCsvSignal();
+
     // [转发信号]
     void stopPollingSignal(); // 请求子线程停止定时器
     void writeCoilSignal(const QString& qmlKey, int address, bool value);
@@ -82,6 +88,10 @@ private:
 
     QThread* m_PLC_Thread = nullptr;
     ModbusControl* m_PLC = nullptr;
+
+    // 🌟 新增 CSV 记录器和线程
+    QThread* m_CSV_Thread = nullptr;
+    ReadWriteCSV* m_CSV_Logger = nullptr;
 
     // 🌟 ADDED: 实验计时器
     QElapsedTimer m_experimentTimer;
