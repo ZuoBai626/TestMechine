@@ -5,6 +5,14 @@
 #include <QThread>
 #include <QVariantMap>
 #include <QVariantList>
+#include <QDebug>
+#include <QCoreApplication>
+
+#include <QImage>   // 🌟 确保 QImage 已包含
+#include <QDir>     // 🌟 确保 QDir 已包含
+#include <QDateTime> // 🌟 确保 QDateTime 已包含
+#include <QQuickWindow>
+
 #include "modbuscontrol.h"
 #include "readwritecsv.h"
 
@@ -56,6 +64,11 @@ public:
     Q_INVOKABLE void writeCoil(const QString& qmlKey, int address, bool value);
     Q_INVOKABLE void writeRegister16(const QString& qmlKey, int address, qint16 value); // 新增 16位写入 QML 接口
     Q_INVOKABLE void writeRegister32(const QString& qmlKey, int address, float value);
+    // 🌟 新增：设置 QML 根对象（QQuickWindow）
+    void setQmlRootWindow(QQuickWindow* window);
+
+    // 🌟 修改：不再接收 QImage，而是直接截图
+    Q_INVOKABLE QString saveChartImage();
 
 signals:
     void plcDataChanged();
@@ -102,7 +115,11 @@ private:
     QVariant m_lastWriteCoilResult;
     bool m_isConnected = false; // 连接状态
 
-    const int MAX_CHART_POINTS = 500;
+    const int MAX_CHART_POINTS = 300000;
+
+    // 🌟 新增私有成员：QML 根窗口指针
+    QQuickWindow* m_rootWindow = nullptr;
+
 };
 
 #endif // THREADMANAGER_H

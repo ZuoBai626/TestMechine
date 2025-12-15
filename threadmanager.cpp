@@ -1,6 +1,4 @@
 #include "ThreadManager.h"
-#include <QDebug>
-#include <QCoreApplication>
 
 // 静态注册 ChartPoint 类型
 static bool typeRegistered = []() { ChartPoint::registerType(); return true; }();
@@ -84,8 +82,6 @@ void ThreadManager::start_Experiment()
     // 🌟 关键: 重置周期计数器
     emit resetCycleCountSignal(); // <-- 在实验开始时发送重置信号
 
-    // 🌟 关键: 重置 Modbus 周期计数器和启动 CSV 记录
-    emit resetCycleCountSignal();
     emit startCsvLoggingSignal(); // <-- 启动 CSV 记录
 
 }
@@ -193,4 +189,51 @@ void ThreadManager::writeRegister16(const QString& qmlKey, int address, qint16 v
 }
 void ThreadManager::writeRegister32(const QString& qmlKey, int address, float value) {
     emit writeRegister32Signal(qmlKey, address, value);
+}
+
+void ThreadManager::setQmlRootWindow(QQuickWindow *window)
+{
+    m_rootWindow = window;
+}
+// 🌟 新增：图片保存功能
+// 返回保存成功后的完整路径，失败则返回空字符串
+QString ThreadManager::saveChartImage()
+{
+    if (!m_rootWindow) {
+        qCritical() << "ThreadManager: QML 根窗口未设置或无效，无法截图。";
+        return QString();
+    }
+
+    // 1. 使用 QQuickWindow::grabWindow() 抓取整个窗口的内容
+    // ⚠️ 注意: grabWindow() 抓取的是整个 QQuickWindow，需要 QML 保证 ChartView 是可见的。
+    QImage image = m_rootWindow->grabWindow();
+
+    if (image.isNull()) {
+        qCritical() << "ThreadManager: 截图失败，返回图像为空。";
+        return QString();
+    }
+
+    // 2. 构造文件路径
+    QString timestampStr = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
+    QString fileName = QString("实验数据_%1.png").arg(timestampStr);
+    QString dirPath = QCoreApplication::applicationDirPath() + "/TestResultImages";
+
+    QDir dir(dirPath);
+    if (!dir.exists()) {
+        if (!dir.mkpath(".")) {
+            qCritical() << "ThreadManager: 创建图片保存目录失败:" << dirPath;
+            return QString();
+        }
+    }
+
+    QString filePath = dirPath + "/" + fileName;
+
+    // 3. 保存文件
+    if (image.save(filePath, "PNG")) {
+        qDebug() << "ThreadManager: 窗口图片成功保存到:" << filePath;
+        return filePath;
+    } else {
+        qCritical() << "ThreadManager: 图片保存失败。路径:" << filePath;
+        return QString();
+    }
 }

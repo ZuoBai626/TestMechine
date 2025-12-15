@@ -53,6 +53,10 @@ ModbusControl::ModbusControl(QObject *parent) : QObject(parent)
     // 连接到 QObject::deleteLater，但不要在这里使用 deleteLater，因为 ModbusControl 是由 ThreadManager 管理的
 
     connect(m_readTimer, &QTimer::timeout, this, &ModbusControl::read_All_Parameters_Slots);
+
+    // 初始化 寄存器表
+    initializeReadItems();
+
 }
 
 ModbusControl::~ModbusControl()
@@ -105,8 +109,7 @@ void ModbusControl::connectAndInitialize()
 
     connect(m_PLC, &QModbusClient::stateChanged, this, &ModbusControl::onModbusStateChanged);
 
-    initializeReadItems();
-    groupAndInitializeRequests(); // 实际分组，这里简化为调用 initializeReadItems
+    // initializeReadItems();
 
     if (!m_PLC->connectDevice()) {
         qWarning() << "ModbusControl: 连接 PLC 失败:" << m_PLC->errorString();
@@ -129,41 +132,60 @@ void ModbusControl::onModbusStateChanged(int state)
 
 void ModbusControl::initializeReadItems()
 {
-    // 示例：定义所有需要持续监控的变量 (F/D 都是 32位浮点数, 占 2 个寄存器)
+    // 浮点数寄存器顺序：高位在前
     RegisterOrder order = HIGH_WORD_FIRST;
 
-    QVector<PlcItem> batch1;
+    QVector<PlcItem> allItems; // 临时存储所有项，包括轮询和非轮询的
 
-    // 浮点数 (VD)
-    batch1.append({"ExpForce1", QModbusDataUnit::HoldingRegisters, 10000/2, 2, order});
-    batch1.append({"ExpForce2", QModbusDataUnit::HoldingRegisters, 10004/2, 2, order});
-    batch1.append({"ExpForce3", QModbusDataUnit::HoldingRegisters, 10008/2, 2, order});
-    batch1.append({"Displacement1", QModbusDataUnit::HoldingRegisters, 10016/2, 2, order});
-    batch1.append({"Displacement2", QModbusDataUnit::HoldingRegisters, 10020/2, 2, order});
-    batch1.append({"Displacement3", QModbusDataUnit::HoldingRegisters, 10024/2, 2, order});
-    // batch1.append({"RunTime", QModbusDataUnit::HoldingRegisters, 10024, 2, order});
+    // ----------------------------------------------------------------------
+    // 1. 需要**周期性轮询**的实时数据 (isPolling = true)
+    //    地址: VD10000 -> 10000/2 = 5000 (Holding Registers)
+    // ----------------------------------------------------------------------
+    allItems.append({"ExpForce1", QModbusDataUnit::HoldingRegisters, 10000/2, 2, order, true});
+    allItems.append({"ExpForce2", QModbusDataUnit::HoldingRegisters, 10004/2, 2, order, true});
+    allItems.append({"ExpForce3", QModbusDataUnit::HoldingRegisters, 10008/2, 2, order, true});
+    allItems.append({"Displacement1", QModbusDataUnit::HoldingRegisters, 10016/2, 2, order, true});
+    allItems.append({"Displacement2", QModbusDataUnit::HoldingRegisters, 10020/2, 2, order, true});
+    allItems.append({"Displacement3", QModbusDataUnit::HoldingRegisters, 10024/2, 2, order, true});
 
-    // 16位整数 (VW) - 示例：设置点
-    // batch1.append({"TargetSpeed", QModbusDataUnit::HoldingRegisters, 20000, 1, LOW_WORD_FIRST});
+    // ----------------------------------------------------------------------
+    // 2. 写入后通过回读更新，不进行周期性轮询的变量 (isPolling = false)
+    //    🌟 示例变量：用户设置的目标力值，仅需在写入后回读更新
+    //    地址: VD12000 -> 12000/2 = 6000 (Holding Registers)
+    // ----------------------------------------------------------------------
+    allItems.append({"TestHold_1", QModbusDataUnit::HoldingRegisters, 2000/2, 2, order, false});
 
-    // 线圈 (Q) - 示例：运行状态
-    // batch1.append({"IsRunning", QModbusDataUnit::Coils, 0, 1, LOW_WORD_FIRST});
+    // ----------------------------------------------------------------------
+    // 3. 初始化 Map 占位符 & 分离轮询项
+    // ----------------------------------------------------------------------
+    m_requestQueue.clear();
+    QVector<PlcItem> pollingBatch; // 简化：假设所有轮询项可以放在一个批次
 
-    // 初始化 Map 占位符
-    for(const auto& item : batch1) {
-        // 根据类型初始化默认值，确保 QML 绑定不会失败
-        if (item.type == QModbusDataUnit::Coils) m_plcData.insert(item.qmlKey, false);
-        else if (item.length == 2) m_plcData.insert(item.qmlKey, 0.0f);
-        else m_plcData.insert(item.qmlKey, 0);
+    for(const auto& item : allItems) {
+        // 初始化 m_plcData，确保 QML 绑定可以访问所有键
+        if (item.type == QModbusDataUnit::Coils || item.type == QModbusDataUnit::DiscreteInputs) {
+            m_plcData.insert(item.qmlKey, false);
+        } else if (item.length == 2) {
+            // 32位数据 (Float 或 Int32)
+            m_plcData.insert(item.qmlKey, 0.0f);
+        } else {
+            // 16位数据 (Int16)
+            m_plcData.insert(item.qmlKey, 0);
+        }
+
+        // 🌟 仅将需要周期性轮询的项添加到请求批次中
+        if (item.isPolling) {
+            pollingBatch.append(item);
+        }
     }
 
-    m_requestQueue.clear();
-    m_requestQueue.append(batch1); // 简化：所有项作为一个批次
-}
+    if (!pollingBatch.isEmpty()) {
+        // 将包含所有轮询项的批次添加到请求队列中
+        m_requestQueue.append(pollingBatch);
+    }
 
-void ModbusControl::groupAndInitializeRequests()
-{
-    // 实际应实现按地址连续性优化分组的逻辑。这里简化为直接使用 initializeReadItems 的结果。
+    // 初始设置时间戳
+    m_plcData.insert("timestampSeconds", 0.0);
 }
 
 void ModbusControl::read_All_Parameters_Slots()

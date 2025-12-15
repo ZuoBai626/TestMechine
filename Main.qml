@@ -31,6 +31,25 @@ ApplicationWindow {
     // 2. 快捷访问 PLC 实时数据 Map
     readonly property var plcData: Cpp_ThreadManager.plcData
 
+    function saveChartView() {
+
+        // 保持 Qt.callLater，以确保 ChartView 渲染稳定
+        Qt.callLater(function() {
+            console.log("调用 C++ 截图功能...");
+
+            // 🌟 直接调用 C++ 函数
+            var filePath = Cpp_ThreadManager.saveChartImage();
+
+            if (filePath.length > 0) {
+                console.log("图片保存成功:", filePath)
+            } else {
+                console.error("图片保存失败，请检查 C++ 端的输出。")
+            }
+        });
+    }
+
+
+
     Item{
         id: root
         anchors.fill: parent
@@ -43,6 +62,18 @@ ApplicationWindow {
             height: 40
             text: "标 定"
             onClicked: systemParameter.visible = true
+        }
+
+        // 🌟 新增：保存曲线图片按钮
+        Button{
+            width: 120
+            height: 40
+            // anchors.horizontalCenter: parent.horizontalCenter
+            // anchors.top: parent.top
+            text: "保存曲线"
+            onClicked: {
+                saveChartView();
+            }
         }
 
     }
@@ -438,7 +469,7 @@ ApplicationWindow {
                 theme: ChartView.ChartThemeBlueCerulean
 
                 ValueAxis { id: axisX_TF; min: chartRoot.chartXMin; max: chartRoot.chartXMax; titleText: "时间 (s)" ; tickCount: 5 }
-                ValueAxis { id: axisY_TF; min: 0; max: 500; titleText: "实验力 (N)" }
+                ValueAxis { id: axisY_TF; min: 0; max: 5000; titleText: "实验力 (N)" }
 
                 LineSeries { id: series_TF_1; name: "实验力 1"; axisX: axisX_TF; axisY: axisY_TF }
                 LineSeries { id: series_TF_2; name: "实验力 2"; axisX: axisX_TF; axisY: axisY_TF }
@@ -455,7 +486,7 @@ ApplicationWindow {
                 theme: ChartView.ChartThemeBrownSand
 
                 ValueAxis { id: axisX_TD; min: chartRoot.chartXMin; max: chartRoot.chartXMax; titleText: "时间 (s)" ; tickCount: 5 }
-                ValueAxis { id: axisY_TD; min: 0; max: 1000; titleText: "位移量 (mm)" }
+                ValueAxis { id: axisY_TD; min: 0; max: 1600; titleText: "位移量 (mm)" }
 
                 LineSeries { id: series_TD_1; name: "位移 1"; axisX: axisX_TD; axisY: axisY_TD }
                 LineSeries { id: series_TD_2; name: "位移 2"; axisX: axisX_TD; axisY: axisY_TD }
@@ -471,8 +502,8 @@ ApplicationWindow {
                 antialiasing: true
                 theme: ChartView.ChartThemeDark
 
-                ValueAxis { id: axisX_DF; min: 0; max: 1000; titleText: "位移量 (mm)"  ; tickCount: 5}
-                ValueAxis { id: axisY_DF; min: 0; max: 500; titleText: "实验力 (N)" }
+                ValueAxis { id: axisX_DF; min: 0; max: 1600; titleText: "位移量 (mm)"  ; tickCount: 5}
+                ValueAxis { id: axisY_DF; min: 0; max: 5100; titleText: "实验力 (N)" }
 
                 // 对应关系: 位移1 vs 力1
                 LineSeries { id: series_DF_1; name: "CH1"; axisX: axisX_DF; axisY: axisY_DF }
@@ -667,10 +698,10 @@ ApplicationWindow {
             chartRoot.chartXMax = 30;
 
             // 确保其他轴的固定范围
-            axisX_DF.min = 0; axisX_DF.max = 1000;
-            axisY_TF.min = 0; axisY_TF.max = 500;
-            axisY_TD.min = 0; axisY_TD.max = 1000;
-            axisY_DF.min = 0; axisY_DF.max = 500;
+            axisX_DF.min = 0; axisX_DF.max = 1600;
+            axisY_TF.min = 0; axisY_TF.max = 5100;
+            axisY_TD.min = 0; axisY_TD.max = 1600;
+            axisY_DF.min = 0; axisY_DF.max = 5100;
         }
 
         // 工具函数: 清空所有曲线 (保留您的逻辑，并确保重置轴)
@@ -721,7 +752,7 @@ ApplicationWindow {
 
         Button{
             width: 120
-            height: 90
+            height: 100
             anchors.bottom: parent.bottom
             text: "开始实验"
             onClicked: {
@@ -736,16 +767,27 @@ ApplicationWindow {
 
         Button{
             width: 120
-            height: 90
+            height: 100
             anchors.bottom: parent.bottom
             text: "停止实验"
             onClicked: {
-                console.log("停止实验")
+                console.log("终止实验")
                 Cpp_ThreadManager.stop_Experiment()
             }
         }
 
+    }
 
+
+    Rectangle{
+        width: 490
+        height: 770
+        color: "gold"
+        anchors.right: root.right
+        anchors.rightMargin: 5
+        anchors.top: root.top
+        anchors.topMargin: 125
+        border.width: 1
     }
 
 }

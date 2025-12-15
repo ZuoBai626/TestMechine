@@ -24,6 +24,7 @@ struct PlcItem {
     int address;
     int length;
     RegisterOrder floatOrder; // 浮点数解析顺序
+    bool isPolling = false; // 🌟 关键新增: 是否需要周期性轮询，默认为 true
 };
 
 class ModbusControl : public QObject
@@ -77,7 +78,6 @@ private slots:
 
 private:
     void initializeReadItems();
-    void groupAndInitializeRequests();
 
     // 写入后的回读验证逻辑
     void verifyWriteAndLog(const QString& qmlKey, QModbusDataUnit::RegisterType type,
