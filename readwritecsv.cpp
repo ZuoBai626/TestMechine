@@ -35,20 +35,20 @@ void ReadWriteCSV::startLogging()
     QMutexLocker locker(&m_mutex);
     m_dataBuffer.clear(); // 清空上次实验数据
     m_startTime = QDateTime::currentDateTime();
-    qDebug() << "ReadWriteCSV: Logging started at" << m_startTime.toString("yyyy-MM-dd hh:mm:ss");
+    qDebug() << "ReadWriteCSV: 可是记录 : " << m_startTime.toString("yyyy-MM-dd hh:mm:ss");
 }
 
 void ReadWriteCSV::stopAndSaveLog()
 {
     QMutexLocker locker(&m_mutex);
     m_endTime = QDateTime::currentDateTime();
-    qDebug() << "ReadWriteCSV: Logging stopped. Data count:" << m_dataBuffer.size();
+    qDebug() << "ReadWriteCSV: 记录完成，总数据:" << m_dataBuffer.size();
 
     // 在子线程中执行文件写入操作
     if (writeDataToFile()) {
-        qDebug() << "ReadWriteCSV: Data successfully saved.";
+        qDebug() << "ReadWriteCSV: 数据保存成功";
     } else {
-        qCritical() << "ReadWriteCSV: Failed to save data.";
+        qCritical() << "ReadWriteCSV: 数据保存失败";
     }
     m_dataBuffer.clear(); // 写入完成后清空缓存
 }
@@ -56,7 +56,7 @@ void ReadWriteCSV::stopAndSaveLog()
 bool ReadWriteCSV::writeDataToFile()
 {
     if (m_dataBuffer.isEmpty()) {
-        qDebug() << "ReadWriteCSV: Data buffer is empty, nothing to save.";
+        qDebug() << "ReadWriteCSV: 数据为空，无需保存";
         return true;
     }
 
@@ -69,7 +69,7 @@ bool ReadWriteCSV::writeDataToFile()
     QDir dir(dirPath);
     if (!dir.exists()) {
         if (!dir.mkpath(".")) {
-            qCritical() << "ReadWriteCSV: Failed to create directory:" << dirPath;
+            qCritical() << "ReadWriteCSV: 创建路径失败:" << dirPath;
             return false;
         }
     }
@@ -78,7 +78,7 @@ bool ReadWriteCSV::writeDataToFile()
     QFile file(filePath);
 
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        qCritical() << "ReadWriteCSV: Could not open file for writing:" << filePath;
+        qCritical() << "ReadWriteCSV: 无法打开路径 :" << filePath;
         return false;
     }
 

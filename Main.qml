@@ -391,6 +391,7 @@ ApplicationWindow {
     }
 
     // 图表显示部分
+    // 图表显示部分
     Item{
         id: chartRoot
         width: 1400
@@ -424,6 +425,8 @@ ApplicationWindow {
             anchors.right: parent.right
             anchors.bottom: parent.bottom
             currentIndex: chartTabBar.currentIndex
+
+            // ... (ChartViews 定义保持不变)
 
             // -------------------------------------------------
             // 图表 A: 时间 (X) - 实验力 (Y)
@@ -478,6 +481,14 @@ ApplicationWindow {
             }
         }
 
+        // 🌟 关键修改 1: 在组件完成时，连接 Tab 切换信号
+        Component.onCompleted: {
+            // 连接信号，Tab 切换时触发重绘逻辑
+            chartTabBar.currentIndexChanged.connect(chartRoot.handleTabSwitch);
+            // 初始调用，确保首次加载时轴和图表状态正确
+            chartRoot.handleTabSwitch();
+        }
+
         // 3. 核心逻辑: 监听 C++ 数据变化并刷新图表
         Connections {
             target: Cpp_ThreadManager
@@ -488,12 +499,58 @@ ApplicationWindow {
             }
         }
 
-        // 🌟 辅助函数: 增量更新 LineSeries
+        // 🌟 关键修改 2: Tab 切换处理函数 (负责清空并用历史数据重绘)
+        function handleTabSwitch() {
+            var dataList = Cpp_ThreadManager.chartDataModel;
+
+            // 1. 确保所有时间轴曲线被清空，防止数据残留
+            chartRoot.clearAllSeries();
+
+            if (!dataList || dataList.length === 0) {
+                // 如果没有数据，确保轴范围正确并返回
+                chartRoot.resetAllAxisLimits();
+                return;
+            }
+
+            // 2. 根据当前选中的 Tab，用历史数据重绘曲线
+            switch (chartTabBar.currentIndex) {
+            case 0: // F-T 曲线
+                // 重绘所有历史数据点
+                updateSeriesFromData(series_TF_1, dataList, "timestampSeconds", "force1");
+                updateSeriesFromData(series_TF_2, dataList, "timestampSeconds", "force2");
+                updateSeriesFromData(series_TF_3, dataList, "timestampSeconds", "force3");
+                break;
+
+            case 1: // S-T 曲线
+                updateSeriesFromData(series_TD_1, dataList, "timestampSeconds", "disp1");
+                updateSeriesFromData(series_TD_2, dataList, "timestampSeconds", "disp2");
+                updateSeriesFromData(series_TD_3, dataList, "timestampSeconds", "disp3");
+                break;
+
+            case 2: // F-S 曲线 (特性曲线)
+                updateSeriesFromData(series_DF_1, dataList, "disp1", "force1");
+                updateSeriesFromData(series_DF_2, dataList, "disp2", "force2");
+                updateSeriesFromData(series_DF_3, dataList, "disp3", "force3");
+                break;
+            }
+
+            // 3. 调整时间轴范围
+            var currentTime = dataList[dataList.length - 1].timestampSeconds;
+            adjustAxisX(null, currentTime);
+        }
+
+        // 🌟 关键修改 3: 辅助函数: 增量更新 LineSeries (增加 NaN/Inf 检查)
         function updateSeries(series, data, xKey, yKey) {
             // data 是最新数据点对象
             var xValue = data[xKey];
             var yValue = data[yKey];
-            series.append(xValue, yValue);
+
+            // 🚨 修复 NaN/Inf 报错：只接受有限数值
+            if (isFinite(xValue) && isFinite(yValue)) {
+                series.append(xValue, yValue);
+            } else {
+                console.warn("Skipping invalid point for series " + series.name + ": X=" + xValue + ", Y=" + yValue);
+            }
         }
 
         // 4. JS 函数: 仅更新当前可见的图表
@@ -513,6 +570,7 @@ ApplicationWindow {
             // ----------------------------------------------------
             // 2. 数据裁剪和 Series 同步移除 (仅在滚动阶段执行)
             // ----------------------------------------------------
+            // 注：您原代码中的移除逻辑有冗余，这里只保留时间曲线的移除
             if (currentTime > fixedRange) {
                 var timeThreshold = currentTime - fixedRange;
 
@@ -523,12 +581,9 @@ ApplicationWindow {
                     dataList.splice(0, 1);
 
                     // 必须同步移除 LineSeries 中的对应点 (时间轴曲线)
-                    // 注意：只需处理当前Tab可能显示的时间曲线
-                    if (chartTabBar.currentIndex === 0 || chartTabBar.currentIndex === 1) {
-                        series_TF_1.remove(0); series_TF_2.remove(0); series_TF_3.remove(0);
-                        series_TD_1.remove(0); series_TD_2.remove(0); series_TD_3.remove(0);
-                    }
-                    // 特性曲线（DF）不需要时间裁剪，其数据点不移除
+                    // 裁剪仅对时间相关的曲线有效，故无条件对所有时间曲线移除头部点
+                    series_TF_1.remove(0); series_TF_2.remove(0); series_TF_3.remove(0);
+                    series_TD_1.remove(0); series_TD_2.remove(0); series_TD_3.remove(0);
                 }
             }
 
@@ -564,31 +619,36 @@ ApplicationWindow {
             }
         }
 
-        // 5. 通用工具函数: 将 C++ List 转换为 LineSeries 点
+        // 🌟 关键修改 4: 通用工具函数: 将 C++ List 转换为 LineSeries 点 (增加 NaN/Inf 检查)
         function updateSeriesFromData(series, dataList, xKey, yKey) {
-            series.clear();
+            series.clear(); // 强制清空当前曲线，确保从原点开始绘制
 
             for (var i = 0; i < dataList.length; i++) {
                 var item = dataList[i];
                 var xValue = item[xKey];
                 var yValue = item[yKey];
-                series.append(xValue, yValue);
+
+                // 🚨 修复 NaN/Inf 报错：只接受有限数值
+                if (isFinite(xValue) && isFinite(yValue)) {
+                    series.append(xValue, yValue); // 重绘所有有效的历史点
+                } else {
+                    // 如果发现无效值，则跳过此点
+                    // console.warn("Skipping historical invalid point for series " + series.name + ": X=" + xValue + ", Y=" + yValue);
+                }
             }
         }
 
-        // 🌟 关键修改: 工具函数: 自动滚动时间轴 (增强 $0-60$ 固定逻辑)
+        // 🌟 工具函数: 自动滚动时间轴 (保留您的逻辑)
         function adjustAxisX(axis, currentTime) {
             var fixedRange = 30; // 固定的显示窗口宽度
 
             if (currentTime > fixedRange) {
                 // 1. 滚动逻辑: 超过 30s，开始滚动
-                // 直接更新 QML 属性，轴通过 Binding 自动更新
                 chartRoot.chartXMax = currentTime;
                 chartRoot.chartXMin = currentTime - fixedRange;
 
             } else {
                 // 2. 强制固定逻辑: 0 <= currentTime <= 30s
-                // 🌟 无条件强制设置 QML 属性，Binding 确保轴锁定 0-30，压制 Chart 内部调整。
                 chartRoot.chartXMin = 0;
                 chartRoot.chartXMax = fixedRange;
             }
@@ -600,9 +660,9 @@ ApplicationWindow {
             }
         }
 
-        // 工具函数: 强制重置所有图表的轴上下限
+        // 工具函数: 强制重置所有图表的轴上下限 (保留您的逻辑)
         function resetAllAxisLimits() {
-            // 🌟 关键修改: 重置 QML 属性，所有时间轴通过 Binding 自动更新
+            // 🌟 重置 QML 属性，所有时间轴通过 Binding 自动更新
             chartRoot.chartXMin = 0;
             chartRoot.chartXMax = 30;
 
@@ -613,7 +673,7 @@ ApplicationWindow {
             axisY_DF.min = 0; axisY_DF.max = 500;
         }
 
-        // 工具函数: 清空所有曲线
+        // 工具函数: 清空所有曲线 (保留您的逻辑，并确保重置轴)
         function clearAllSeries() {
             series_TF_1.clear(); series_TF_2.clear(); series_TF_3.clear();
             series_TD_1.clear(); series_TD_2.clear(); series_TD_3.clear();
@@ -689,6 +749,3 @@ ApplicationWindow {
     }
 
 }
-
-
-

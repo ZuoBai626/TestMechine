@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
 
     engine.rootContext()->setContextProperty("Cpp_ThreadManager",threadmanager);
 
+
     QObject::connect(
         &engine,
         &QQmlApplicationEngine::objectCreationFailed,
