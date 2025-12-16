@@ -1,127 +1,94 @@
 #include "ThreadManager.h"
+#include <QImage>
+#include <QDir>
+#include <QDateTime>
 
-// 静态注册 ChartPoint 类型
+// 注册ChartPoint元类型（必须）
 static bool typeRegistered = []() { ChartPoint::registerType(); return true; }();
 
-// [单例] 静态方法获取单例实例
 ThreadManager* ThreadManager::getInstance()
 {
     static ThreadManager instance;
     return &instance;
 }
 
-// [私有] 构造函数
 ThreadManager::ThreadManager(QObject *parent) : QObject(parent)
 {
+    // === 创建PLC线程和对象 ===
     m_PLC_Thread = new QThread(this);
     m_PLC = new ModbusControl();
+    m_PLC->moveToThread(m_PLC_Thread);
 
+    // === 创建CSV线程和对象 ===
     m_CSV_Thread = new QThread(this);
-
-    // 🌟 1. CSV Logger 初始化和移动到独立线程
     m_CSV_Logger = new ReadWriteCSV();
     m_CSV_Logger->moveToThread(m_CSV_Thread);
-    m_CSV_Thread->start(); // 启动 CSV 线程
+    m_CSV_Thread->start();
 
-    // 🌟 关键连接: ModbusControl 的数据信号 转发给 CSV Logger 槽函数
-    connect(m_PLC, &ModbusControl::instantDataReady, m_CSV_Logger, &ReadWriteCSV::cacheInstantData, Qt::QueuedConnection);
+    // === 数据转发：Modbus -> CSV ===
+    connect(m_PLC, &ModbusControl::instantDataReady,
+            m_CSV_Logger, &ReadWriteCSV::cacheInstantData, Qt::QueuedConnection);
 
-    // 3. 连接 CSV 线程控制信号
-    connect(this, &ThreadManager::startCsvLoggingSignal, m_CSV_Logger, &ReadWriteCSV::startLogging, Qt::QueuedConnection);
-    connect(this, &ThreadManager::stopAndSaveCsvSignal, m_CSV_Logger, &ReadWriteCSV::stopAndSaveLog, Qt::QueuedConnection);
+    // === CSV控制信号 ===
+    connect(this, &ThreadManager::startCsvLoggingSignal,
+            m_CSV_Logger, &ReadWriteCSV::startLogging, Qt::QueuedConnection);
+    connect(this, &ThreadManager::stopAndSaveCsvSignal,
+            m_CSV_Logger, &ReadWriteCSV::stopAndSaveLog, Qt::QueuedConnection);
 
+    // === 启动PLC线程并立即连接PLC ===
+    m_PLC_Thread->start();
+    QMetaObject::invokeMethod(m_PLC, "connectToPlc", Qt::QueuedConnection);
 
+    // === 关键信号连接 ===
+    connect(m_PLC, &ModbusControl::connectionStatusChanged, this, &ThreadManager::updateConnectionStatus);
+    connect(m_PLC, &ModbusControl::instantDataReady, this, &ThreadManager::handleInstantData);
+    connect(m_PLC, &ModbusControl::coilVerificationResultSignal, this, &ThreadManager::updateLastWriteCoilResult);
+
+    // === 写入请求转发 ===
+    connect(this, &ThreadManager::writeCoilSignal, m_PLC, &ModbusControl::Modbus_Coils_Write);
+    connect(this, &ThreadManager::writeRegister16Signal, m_PLC, &ModbusControl::Modbus_HoldRegisters_16_Write);
+    connect(this, &ThreadManager::writeRegister32Signal, m_PLC, &ModbusControl::Modbus_HoldRegisters_32_Write);
 }
 
 ThreadManager::~ThreadManager()
 {
-    // 在析构时安全停止线程
-    stop_Experiment();
+    // === 程序退出时安全清理 ===
+    if (m_PLC) {
+        QMetaObject::invokeMethod(m_PLC, "disconnectFromPlc", Qt::BlockingQueuedConnection);
+        delete m_PLC;
+        m_PLC = nullptr;
+    }
+    if (m_PLC_Thread && m_PLC_Thread->isRunning()) {
+        m_PLC_Thread->quit();
+        m_PLC_Thread->wait(1000);
+    }
 
-    // 线程对象会随着 this 销毁
-    // ModbusControl 对象会在 stop_Experiment 中被安全处理
+    // 最后保存一次CSV
+    emit stopAndSaveCsvSignal();
+    if (m_CSV_Thread && m_CSV_Thread->isRunning()) {
+        m_CSV_Thread->quit();
+        m_CSV_Thread->wait(1000);
+    }
 }
 
 void ThreadManager::start_Experiment()
 {
-    if (m_PLC_Thread->isRunning()) return;
-
-    if (!m_PLC) m_PLC = new ModbusControl();
-
-    // 🌟 核心修改 1: 在启动实验时，归零计时器
-    m_experimentTimer.start();
-    qDebug() << "ThreadManager: 实验计时器已启动/归零。";
-
-    m_PLC->moveToThread(m_PLC_Thread);
-
-    // --- 信号连接 (确保线程安全和安全停止) ---
-
-    // 1. 生命周期/安全停止
-    connect(m_PLC_Thread, &QThread::started, m_PLC, &ModbusControl::connectAndInitialize, Qt::UniqueConnection);
-    // connect(this, &ThreadManager::stopPollingSignal, m_PLC, &ModbusControl::stopPolling, Qt::UniqueConnection);
-    connect(m_PLC, &ModbusControl::connectionStatusChanged, this, &ThreadManager::updateConnectionStatus, Qt::UniqueConnection);
-
-    // 🌟 新增连接: 用于重置时间戳计数器
-    connect(this, &ThreadManager::resetCycleCountSignal, m_PLC, &ModbusControl::resetCycleCount, Qt::UniqueConnection);
-
-    // 2. 数据回传
-    connect(m_PLC, &ModbusControl::instantDataReady, this, &ThreadManager::handleInstantData, Qt::UniqueConnection);
-    connect(m_PLC, &ModbusControl::coilVerificationResultSignal, this, &ThreadManager::updateLastWriteCoilResult, Qt::UniqueConnection);
-
-    // 2. 数据回传 - 🌟 确保连接签名匹配
-    connect(m_PLC, static_cast<void (ModbusControl::*)(const QVariantMap&)>(&ModbusControl::instantDataReady),
-            this, &ThreadManager::handleInstantData, Qt::UniqueConnection);
-
-    // 3. 写入请求转发 (QML -> 主线程 -> 子线程)
-    connect(this, &ThreadManager::writeCoilSignal, m_PLC, &ModbusControl::Modbus_Coils_Write, Qt::UniqueConnection);
-    connect(this, &ThreadManager::writeRegister16Signal, m_PLC, &ModbusControl::Modbus_HoldRegisters_16_Write, Qt::UniqueConnection);
-    connect(this, &ThreadManager::writeRegister32Signal, m_PLC, &ModbusControl::Modbus_HoldRegisters_32_Write, Qt::UniqueConnection);
-
-    m_PLC_Thread->start();
-
-    // 🌟 关键: 重置周期计数器
-    emit resetCycleCountSignal(); // <-- 在实验开始时发送重置信号
-
-    emit startCsvLoggingSignal(); // <-- 启动 CSV 记录
-
+    QMetaObject::invokeMethod(m_PLC, "startPolling", Qt::QueuedConnection);
+    emit startCsvLoggingSignal();
+    qDebug() << "ThreadManager: 实验开始 —— 轮询与CSV记录已启动";
 }
 
 void ThreadManager::stop_Experiment()
 {
-    if (m_PLC_Thread->isRunning() && m_PLC) {
+    QMetaObject::invokeMethod(m_PLC, "stopPolling", Qt::QueuedConnection);
+    emit stopAndSaveCsvSignal();
 
-        // 🌟 核心修改 1: 使用 BlockingQueuedConnection 强制在子线程中同步执行 stopPolling
-        bool success = QMetaObject::invokeMethod(m_PLC, "stopPolling",
-                                                 Qt::BlockingQueuedConnection);
-
-        if (!success) {
-            qWarning() << "ThreadManager: 警告！无法同步执行 stopPolling 槽函数。";
-        }
-
-        // 2. 退出线程事件循环 (现在可以安全退出)
-        m_PLC_Thread->quit();
-
-        // 3. 安全等待线程退出
-        if (!m_PLC_Thread->wait(1000)) { // 增加等待时间，确保完成
-            m_PLC_Thread->terminate();
-            m_PLC_Thread->wait();
-            qWarning() << "ThreadManager: PLC 线程被强制终止。";
-        }
-
-        // 4. 清理 ModbusControl (线程已退出，主线程可以安全删除)
-        delete m_PLC;
-        m_PLC = nullptr;
-    }
-
-    // 5. 清空图表数据
+    // 清空图表数据
     if (!m_chartDataModel.isEmpty()) {
         m_chartDataModel.clear();
         emit chartDataModelChanged();
     }
-
-    // 触发 CSV 文件写入操作，这将在 m_CSV_Thread 中执行
-    emit stopAndSaveCsvSignal(); // <-- 停止并保存 CSV
-
+    qDebug() << "ThreadManager: 实验停止 —— 轮询暂停，CSV已保存，图表已清空";
 }
 
 void ThreadManager::updateConnectionStatus(bool connected)
@@ -134,19 +101,11 @@ void ThreadManager::updateConnectionStatus(bool connected)
 
 void ThreadManager::handleInstantData(const QVariantMap& data)
 {
-
-    // // 🌟 核心：在主线程接收到数据时，立即计算相对时间
-    // qreal timestampSeconds = m_experimentTimer.elapsed() / 1000.0;
-
-    // 1. 更新主线程缓存并通知 QML
     m_latestPlcData = data;
     emit plcDataChanged();
 
-    // 2. 更新图表模型
-    // 🌟 关键提取: 从数据 Map 中提取时间戳
     qreal timestampSeconds = data.value("timestampSeconds").toReal();
 
-    // 2. 更新图表模型
     if (data.contains("ExpForce1")) {
         ChartPoint p;
         p.timestampSeconds = timestampSeconds;
@@ -156,13 +115,6 @@ void ThreadManager::handleInstantData(const QVariantMap& data)
         p.disp1 = data.value("Displacement1").toFloat();
         p.disp2 = data.value("Displacement2").toFloat();
         p.disp3 = data.value("Displacement3").toFloat();
-
-        // qDebug() << "Chart Data - Time:" << timestampSeconds << " ExpForce1:" << p.force1; // 🌟 打印此行
-        // qDebug() << "Chart Data - Time:" << timestampSeconds << " ExpForce2:" << p.force2; // 🌟 打印此行
-        // qDebug() << "Chart Data - Time:" << timestampSeconds << " ExpForce3:" << p.force3; // 🌟 打印此行
-        // qDebug() << "Chart Data - Time:" << timestampSeconds << " Displacement1:" << p.disp1; // 🌟 打印此行
-        // qDebug() << "Chart Data - Time:" << timestampSeconds << " Displacement2:" << p.disp2; // 🌟 打印此行
-        // qDebug() << "Chart Data - Time:" << timestampSeconds << " Displacement3:" << p.disp3; // 🌟 打印此行
 
         m_chartDataModel.append(QVariant::fromValue(p));
 
@@ -180,14 +132,18 @@ void ThreadManager::updateLastWriteCoilResult(const QVariant& value)
     emit lastWriteCoilResultChanged();
 }
 
-// Q_INVOKABLE 转发函数
-void ThreadManager::writeCoil(const QString& qmlKey, int address, bool value) {
+void ThreadManager::writeCoil(const QString& qmlKey, int address, bool value)
+{
     emit writeCoilSignal(qmlKey, address, value);
 }
-void ThreadManager::writeRegister16(const QString& qmlKey, int address, qint16 value) {
+
+void ThreadManager::writeRegister16(const QString& qmlKey, int address, qint16 value)
+{
     emit writeRegister16Signal(qmlKey, address, value);
 }
-void ThreadManager::writeRegister32(const QString& qmlKey, int address, float value) {
+
+void ThreadManager::writeRegister32(const QString& qmlKey, int address, float value)
+{
     emit writeRegister32Signal(qmlKey, address, value);
 }
 
@@ -195,45 +151,35 @@ void ThreadManager::setQmlRootWindow(QQuickWindow *window)
 {
     m_rootWindow = window;
 }
-// 🌟 新增：图片保存功能
-// 返回保存成功后的完整路径，失败则返回空字符串
+
 QString ThreadManager::saveChartImage()
 {
     if (!m_rootWindow) {
-        qCritical() << "ThreadManager: QML 根窗口未设置或无效，无法截图。";
+        qCritical() << "ThreadManager: QML根窗口未设置，无法截图";
         return QString();
     }
 
-    // 1. 使用 QQuickWindow::grabWindow() 抓取整个窗口的内容
-    // ⚠️ 注意: grabWindow() 抓取的是整个 QQuickWindow，需要 QML 保证 ChartView 是可见的。
     QImage image = m_rootWindow->grabWindow();
-
     if (image.isNull()) {
-        qCritical() << "ThreadManager: 截图失败，返回图像为空。";
+        qCritical() << "ThreadManager: 截图失败";
         return QString();
     }
 
-    // 2. 构造文件路径
     QString timestampStr = QDateTime::currentDateTime().toString("yyyyMMdd_hhmmss");
     QString fileName = QString("实验数据_%1.png").arg(timestampStr);
     QString dirPath = QCoreApplication::applicationDirPath() + "/TestResultImages";
 
     QDir dir(dirPath);
     if (!dir.exists()) {
-        if (!dir.mkpath(".")) {
-            qCritical() << "ThreadManager: 创建图片保存目录失败:" << dirPath;
-            return QString();
-        }
+        dir.mkpath(".");
     }
 
     QString filePath = dirPath + "/" + fileName;
-
-    // 3. 保存文件
     if (image.save(filePath, "PNG")) {
-        qDebug() << "ThreadManager: 窗口图片成功保存到:" << filePath;
+        qDebug() << "ThreadManager: 图表图片保存成功:" << filePath;
         return filePath;
     } else {
-        qCritical() << "ThreadManager: 图片保存失败。路径:" << filePath;
+        qCritical() << "ThreadManager: 图片保存失败";
         return QString();
     }
 }

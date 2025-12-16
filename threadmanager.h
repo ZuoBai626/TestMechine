@@ -5,19 +5,13 @@
 #include <QThread>
 #include <QVariantMap>
 #include <QVariantList>
-#include <QDebug>
-#include <QCoreApplication>
-
-#include <QImage>   // 🌟 确保 QImage 已包含
-#include <QDir>     // 🌟 确保 QDir 已包含
-#include <QDateTime> // 🌟 确保 QDateTime 已包含
 #include <QQuickWindow>
+#include <QElapsedTimer>
 
 #include "modbuscontrol.h"
 #include "readwritecsv.h"
 
-
-// ChartPoint 结构体
+// 用于QML图表的点结构体
 struct ChartPoint {
     Q_GADGET
     Q_PROPERTY(qreal timestampSeconds MEMBER timestampSeconds)
@@ -28,9 +22,9 @@ struct ChartPoint {
     Q_PROPERTY(qreal disp2 MEMBER disp2)
     Q_PROPERTY(qreal disp3 MEMBER disp3)
 public:
-    qreal timestampSeconds;
-    qreal force1, force2, force3;
-    qreal disp1, disp2, disp3;
+    qreal timestampSeconds = 0.0;
+    qreal force1 = 0.0, force2 = 0.0, force3 = 0.0;
+    qreal disp1 = 0.0, disp2 = 0.0, disp3 = 0.0;
 
     static void registerType() { qRegisterMetaType<ChartPoint>("ChartPoint"); }
 };
@@ -42,84 +36,63 @@ class ThreadManager : public QObject
     Q_PROPERTY(QVariantMap plcData READ plcData NOTIFY plcDataChanged)
     Q_PROPERTY(QVariantList chartDataModel READ chartDataModel NOTIFY chartDataModelChanged)
     Q_PROPERTY(QVariant lastWriteCoilResult READ lastWriteCoilResult NOTIFY lastWriteCoilResultChanged)
-    Q_PROPERTY(bool isConnected READ isConnected NOTIFY isConnectedChanged) // 新增连接状态属性
+    Q_PROPERTY(bool isConnected READ isConnected NOTIFY isConnectedChanged)
 
 public:
-    // [单例] 静态方法获取单例实例
     static ThreadManager* getInstance();
-
-    // 禁止拷贝
     ThreadManager(const ThreadManager&) = delete;
     ThreadManager& operator=(const ThreadManager&) = delete;
 
-    // Getter 方法
     QVariantMap plcData() const { return m_latestPlcData; }
     QVariantList chartDataModel() const { return m_chartDataModel; }
     QVariant lastWriteCoilResult() const { return m_lastWriteCoilResult; }
-    bool isConnected() const { return m_isConnected; } // Getter 实现
+    bool isConnected() const { return m_isConnected; }
 
-    // Q_INVOKABLE 方法
-    Q_INVOKABLE void start_Experiment();
-    Q_INVOKABLE void stop_Experiment();
-    Q_INVOKABLE void writeCoil(const QString& qmlKey, int address, bool value);
-    Q_INVOKABLE void writeRegister16(const QString& qmlKey, int address, qint16 value); // 新增 16位写入 QML 接口
-    Q_INVOKABLE void writeRegister32(const QString& qmlKey, int address, float value);
-    // 🌟 新增：设置 QML 根对象（QQuickWindow）
     void setQmlRootWindow(QQuickWindow* window);
-
-    // 🌟 修改：不再接收 QImage，而是直接截图
     Q_INVOKABLE QString saveChartImage();
+
+    Q_INVOKABLE void start_Experiment();  // 开始实验：仅启动轮询+记录
+    Q_INVOKABLE void stop_Experiment();   // 停止实验：仅停止轮询+保存CSV
+
+    Q_INVOKABLE void writeCoil(const QString& qmlKey, int address, bool value);
+    Q_INVOKABLE void writeRegister16(const QString& qmlKey, int address, qint16 value);
+    Q_INVOKABLE void writeRegister32(const QString& qmlKey, int address, float value);
 
 signals:
     void plcDataChanged();
     void chartDataModelChanged();
     void lastWriteCoilResultChanged();
-    void isConnectedChanged(); // 状态变更信号
+    void isConnectedChanged();
 
-    // 🌟 新增信号：请求子线程重置周期计数器
-    void resetCycleCountSignal();
+    void writeCoilSignal(const QString& qmlKey, int address, bool value);
+    void writeRegister16Signal(const QString& qmlKey, int address, qint16 value);
+    void writeRegister32Signal(const QString& qmlKey, int address, float value);
 
-    // 🌟 新增信号：通知 CSV 记录器开始/停止
     void startCsvLoggingSignal();
     void stopAndSaveCsvSignal();
-
-    // [转发信号]
-    void stopPollingSignal(); // 请求子线程停止定时器
-    void writeCoilSignal(const QString& qmlKey, int address, bool value);
-    void writeRegister16Signal(const QString& qmlKey, int address, qint16 value); // 转发 16位写入
-    void writeRegister32Signal(const QString& qmlKey, int address, float value);
 
 private slots:
     void handleInstantData(const QVariantMap& data);
     void updateLastWriteCoilResult(const QVariant& value);
-    void updateConnectionStatus(bool connected); // 处理连接状态变更
+    void updateConnectionStatus(bool connected);
 
 private:
-    // [私有] 构造函数
     explicit ThreadManager(QObject *parent = nullptr);
     ~ThreadManager();
 
-    QThread* m_PLC_Thread = nullptr;
-    ModbusControl* m_PLC = nullptr;
+    QThread* m_PLC_Thread = nullptr;           // PLC通信专用线程
+    ModbusControl* m_PLC = nullptr;            // Modbus控制对象
 
-    // 🌟 新增 CSV 记录器和线程
-    QThread* m_CSV_Thread = nullptr;
-    ReadWriteCSV* m_CSV_Logger = nullptr;
+    QThread* m_CSV_Thread = nullptr;           // CSV记录专用线程
+    ReadWriteCSV* m_CSV_Logger = nullptr;      // CSV读写器
 
-    // 🌟 ADDED: 实验计时器
-    QElapsedTimer m_experimentTimer;
+    QVariantMap m_latestPlcData;               // 主线程缓存的最新PLC数据
+    QVariantList m_chartDataModel;             // 图表数据模型
+    QVariant m_lastWriteCoilResult;            // 上次线圈写入校验结果
+    bool m_isConnected = false;                // 当前连接状态
 
-    // 主线程维护的数据副本
-    QVariantMap m_latestPlcData;
-    QVariantList m_chartDataModel;
-    QVariant m_lastWriteCoilResult;
-    bool m_isConnected = false; // 连接状态
-
-    const int MAX_CHART_POINTS = 300000;
-
-    // 🌟 新增私有成员：QML 根窗口指针
-    QQuickWindow* m_rootWindow = nullptr;
-
+    QQuickWindow* m_rootWindow = nullptr;      // QML根窗口，用于截图
+    const int MAX_CHART_POINTS = 300000;       // 图表最大点数限制
 };
 
 #endif // THREADMANAGER_H

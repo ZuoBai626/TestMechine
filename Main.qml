@@ -107,7 +107,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["ExpForce1"].toFixed(3)
+                text: plcData["ExpForce1"].toFixed(6)
                 font.pixelSize: 40
             }
 
@@ -153,7 +153,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["ExpForce2"].toFixed(3)
+                text: plcData["ExpForce2"].toFixed(6)
                 font.pixelSize: 40
             }
 
@@ -199,7 +199,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["ExpForce3"].toFixed(3)
+                text: plcData["ExpForce3"].toFixed(6)
                 font.pixelSize: 40
             }
 
@@ -245,7 +245,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["Displacement1"].toFixed(3)
+                text: plcData["Displacement1"].toFixed(6)
                 font.pixelSize: 40
             }
 
@@ -291,7 +291,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["Displacement2"].toFixed(3)
+                text: plcData["Displacement2"].toFixed(6)
                 font.pixelSize: 40
             }
 
@@ -337,7 +337,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["Displacement3"].toFixed(3)
+                text: plcData["Displacement3"].toFixed(6)
                 font.pixelSize: 40
             }
 
@@ -416,7 +416,7 @@ ApplicationWindow {
 
     SystemParameters{
         id: systemParameter
-        anchors.centerIn: root
+        anchors.centerIn: parent
         z : 10
         visible: false
     }
@@ -534,7 +534,7 @@ ApplicationWindow {
         function handleTabSwitch() {
             var dataList = Cpp_ThreadManager.chartDataModel;
 
-            // 1. 确保所有时间轴曲线被清空，防止数据残留
+            // 1. 确保所有曲线被清空，防止数据残留
             chartRoot.clearAllSeries();
 
             if (!dataList || dataList.length === 0) {
@@ -565,9 +565,14 @@ ApplicationWindow {
                 break;
             }
 
-            // 3. 调整时间轴范围
-            var currentTime = dataList[dataList.length - 1].timestampSeconds;
-            adjustAxisX(null, currentTime);
+            // 3. 调整时间轴范围 (仅在 F-T 和 S-T 曲线时需要根据最新时间调整)
+            if (chartTabBar.currentIndex === 0 || chartTabBar.currentIndex === 1) {
+                var currentTime = dataList[dataList.length - 1].timestampSeconds;
+                adjustAxisX(null, currentTime);
+            } else {
+                // F-S 曲线不需要时间轴滚动，保持固定范围
+                chartRoot.resetAllAxisLimits();
+            }
         }
 
         // 🌟 关键修改 3: 辅助函数: 增量更新 LineSeries (增加 NaN/Inf 检查)
@@ -599,23 +604,20 @@ ApplicationWindow {
             var currentTime = latestData.timestampSeconds;
 
             // ----------------------------------------------------
-            // 2. 数据裁剪和 Series 同步移除 (仅在滚动阶段执行)
+            // 2. LineSeries 长度同步裁剪 (替代原有的基于时间的 while 循环)
+            // C++ 端 m_chartDataModel 已经由 MAX_CHART_POINTS 限制了长度。
+            // QML 只需要确保 LineSeries 的长度与其保持一致即可。
             // ----------------------------------------------------
-            // 注：您原代码中的移除逻辑有冗余，这里只保留时间曲线的移除
-            if (currentTime > fixedRange) {
-                var timeThreshold = currentTime - fixedRange;
+            var targetLength = dataList.length;
 
-                // 循环移除所有时间戳小于 timeThreshold 的点
-                while (dataList.length > 0 && dataList[0].timestampSeconds < timeThreshold) {
-
-                    // 移除 QML 数据模型中的旧点
-                    dataList.splice(0, 1);
-
-                    // 必须同步移除 LineSeries 中的对应点 (时间轴曲线)
-                    // 裁剪仅对时间相关的曲线有效，故无条件对所有时间曲线移除头部点
-                    series_TF_1.remove(0); series_TF_2.remove(0); series_TF_3.remove(0);
-                    series_TD_1.remove(0); series_TD_2.remove(0); series_TD_3.remove(0);
-                }
+            // 🌟 关键修正：确保 LineSeries 的点数不超过 C++ 模型实际拥有的点数。
+            // 裁剪仅对时间相关的曲线有效 (F-T, S-T)，F-S 曲线不滚动时间，但其最大点数受 MAX_CHART_POINTS 限制。
+            while (series_TF_1.count > targetLength) {
+                // LineSeries.remove(0) 是唯一安全的方法
+                series_TF_1.remove(0); series_TF_2.remove(0); series_TF_3.remove(0);
+                series_TD_1.remove(0); series_TD_2.remove(0); series_TD_3.remove(0);
+                series_DF_1.remove(0); series_DF_2.remove(0); series_DF_3.remove(0);
+                console.log("QML: 裁剪 LineSeries 以匹配 C++ 模型长度 " + targetLength);
             }
 
             // ----------------------------------------------------
@@ -625,6 +627,7 @@ ApplicationWindow {
 
             // ----------------------------------------------------
             // 4. LineSeries 增量更新逻辑 (使用 switch 结构)
+            // C++ 数据模型已经增加了最新点，现在 QML Series 增加这个点。
             // ----------------------------------------------------
             switch (chartTabBar.currentIndex) {
             case 0:
@@ -710,7 +713,7 @@ ApplicationWindow {
             series_TD_1.clear(); series_TD_2.clear(); series_TD_3.clear();
             series_DF_1.clear(); series_DF_2.clear(); series_DF_3.clear();
 
-            chartRoot.resetAllAxisLimits();
+            // chartRoot.resetAllAxisLimits();
         }
 
     }
@@ -788,6 +791,37 @@ ApplicationWindow {
         anchors.top: root.top
         anchors.topMargin: 125
         border.width: 1
+
+
+        // Text{
+
+        // }
+
+        // TextField{
+        //     width: 200
+        //     height: 40
+        //     onEditingFinished: {
+        //         console.log("触发写入" + text)
+        //         Cpp_ThreadManager.writeRegister32("TestHold_1",(2000/2),text);
+        //     }
+        // }
+
+        Column{
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 10
+
+            A_TextInput{
+                text:  plcData["TestHold_1"].toFixed(2)
+
+                onEditingFinished: function(value)
+                {
+                    Cpp_ThreadManager.writeRegister32("TestHold_1",(2000/2),value);
+                }
+
+            }
+
+        }
+
     }
 
 }

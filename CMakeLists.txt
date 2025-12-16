@@ -27,6 +27,7 @@ qt_add_qml_module(Test_Mechine
         SOURCES modbuscontrol.h modbuscontrol.cpp
         QML_FILES SystemParameters.qml
         SOURCES readwritecsv.h readwritecsv.cpp
+        QML_FILES A_TextInput.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

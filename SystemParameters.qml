@@ -2,10 +2,17 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 
-Item{
-    id: systemParametersRoot
+Popup{
+    id: systemParametersPopup
     width: 600
     height: 900
+    modal: true
+    closePolicy: Popup.NoAutoClose
+
+    Item{
+        id:systemParametersRoot
+        anchors.fill: parent
+    }
 
     Rectangle{
         anchors.fill: parent
@@ -151,7 +158,7 @@ Item{
         text: "关 闭"
         onClicked: {
             console.log("关闭标定界面")
-            systemParametersRoot.visible = false
+            systemParametersPopup.close()
         }
     }
 
