@@ -6,7 +6,7 @@ ApplicationWindow {
     width: rootWidth
     height: rootHeight
     visible: true
-    title: qsTr("YJTest")
+    title: qsTr("YJJC_Test")
     visibility: "Windowed"    // 全屏显示应用程序
 
     x: Qt.application.screens[1].virtualX
@@ -60,21 +60,10 @@ ApplicationWindow {
         Button{
             width: 120
             height: 40
-            text: "标 定"
+            text: "设 置"
+            font.pixelSize: 20
             onClicked: systemParameter.visible = true
-        }
-
-        // 🌟 新增：保存曲线图片按钮
-        Button{
-            width: 120
-            height: 40
-            // anchors.horizontalCenter: parent.horizontalCenter
-            // anchors.top: parent.top
-            text: "保存曲线"
-            onClicked: {
-                saveChartView();
-            }
-        }
+        }        
 
     }
 
@@ -107,7 +96,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["ExpForce1"].toFixed(6)
+                text: plcData["ExpForce1"].toFixed(2)
                 font.pixelSize: 40
             }
 
@@ -117,7 +106,12 @@ ApplicationWindow {
                 width: 60
                 height: 30
                 text: "清 空"
-                onClicked: console.log("触发清除")
+                onPressed: {
+                    Cpp_ThreadManager.writeCoil("M1.4_端肋1_压力设零",9012,true)
+                }
+                onReleased: {
+                    Cpp_ThreadManager.writeCoil("M1.4_端肋1_压力设零",9012,false)
+                }
             }
 
             Text{
@@ -153,7 +147,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["ExpForce2"].toFixed(6)
+                text: plcData["ExpForce2"].toFixed(2)
                 font.pixelSize: 40
             }
 
@@ -163,7 +157,12 @@ ApplicationWindow {
                 width: 60
                 height: 30
                 text: "清 空"
-                onClicked: console.log("触发清除")
+                onPressed: {
+                    Cpp_ThreadManager.writeCoil("M1.5_中肋1_压力设零",9013,true)
+                }
+                onReleased: {
+                    Cpp_ThreadManager.writeCoil("M1.5_中肋1_压力设零",9013,false)
+                }
             }
 
             Text{
@@ -199,7 +198,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["ExpForce3"].toFixed(6)
+                text: plcData["ExpForce3"].toFixed(2)
                 font.pixelSize: 40
             }
 
@@ -209,7 +208,12 @@ ApplicationWindow {
                 width: 60
                 height: 30
                 text: "清 空"
-                onClicked: console.log("触发清除")
+                onPressed: {
+                    Cpp_ThreadManager.writeCoil("M1.6_端肋2_压力设零",9014,true)
+                }
+                onReleased: {
+                    Cpp_ThreadManager.writeCoil("M1.6_端肋2_压力设零",9014,false)
+                }
             }
 
             Text{
@@ -245,7 +249,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["Displacement1"].toFixed(6)
+                text: plcData["Displacement1"].toFixed(2)
                 font.pixelSize: 40
             }
 
@@ -255,7 +259,13 @@ ApplicationWindow {
                 width: 60
                 height: 30
                 text: "清 空"
-                onClicked: console.log("触发清除")
+                // onClicked: console.log("触发清除")
+                onPressed: {
+                    Cpp_ThreadManager.writeCoil("M1.0_端肋1_位置设零",9008,true)
+                }
+                onReleased: {
+                    Cpp_ThreadManager.writeCoil("M1.0_端肋1_位置设零",9008,false)
+                }
             }
 
             Text{
@@ -291,7 +301,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["Displacement2"].toFixed(6)
+                text: plcData["Displacement2"].toFixed(2)
                 font.pixelSize: 40
             }
 
@@ -301,7 +311,12 @@ ApplicationWindow {
                 width: 60
                 height: 30
                 text: "清 空"
-                onClicked: console.log("触发清除")
+                onPressed: {
+                    Cpp_ThreadManager.writeCoil("M1.1_中肋1_位置设零",9009,true)
+                }
+                onReleased: {
+                    Cpp_ThreadManager.writeCoil("M1.1_中肋1_位置设零",9009,false)
+                }
             }
 
             Text{
@@ -337,7 +352,7 @@ ApplicationWindow {
                 anchors.leftMargin: 20
                 width: 200
                 height: 50
-                text: plcData["Displacement3"].toFixed(6)
+                text: plcData["Displacement3"].toFixed(2)
                 font.pixelSize: 40
             }
 
@@ -347,7 +362,12 @@ ApplicationWindow {
                 width: 60
                 height: 30
                 text: "清 空"
-                onClicked: console.log("触发清除")
+                onPressed: {
+                    Cpp_ThreadManager.writeCoil("M1.2_端肋2_位置设零",9010,true)
+                }
+                onReleased: {
+                    Cpp_ThreadManager.writeCoil("M1.2_端肋2_位置设零",9010,false)
+                }
             }
 
             Text{
@@ -387,14 +407,14 @@ ApplicationWindow {
                 font.pixelSize: 40
             }
 
-            Button{
-                anchors.right: parent.right
-                anchors.top: parent.top
-                width: 60
-                height: 30
-                text: "清 空"
-                onClicked: console.log("触发清除")
-            }
+            // Button{
+            //     anchors.right: parent.right
+            //     anchors.top: parent.top
+            //     width: 60
+            //     height: 30
+            //     text: "清 空"
+            //     onClicked: console.log("触发清除")
+            // }
 
             Text{
                 anchors.bottom: parent.bottom
@@ -468,12 +488,12 @@ ApplicationWindow {
                 antialiasing: true
                 theme: ChartView.ChartThemeBlueCerulean
 
-                ValueAxis { id: axisX_TF; min: chartRoot.chartXMin; max: chartRoot.chartXMax; titleText: "时间 (s)" ; tickCount: 5 }
-                ValueAxis { id: axisY_TF; min: 0; max: 5000; titleText: "实验力 (N)" }
+                ValueAxis { id: axisX_TF; min: chartRoot.chartXMin; max: chartRoot.chartXMax; titleText: "时间 (s)" ; tickCount: 9 }
+                ValueAxis { id: axisY_TF; min: 0; max: 5000; titleText: "实验力 (N)" ; tickCount: 9}
 
-                LineSeries { id: series_TF_1; name: "实验力 1"; axisX: axisX_TF; axisY: axisY_TF }
-                LineSeries { id: series_TF_2; name: "实验力 2"; axisX: axisX_TF; axisY: axisY_TF }
-                LineSeries { id: series_TF_3; name: "实验力 3"; axisX: axisX_TF; axisY: axisY_TF }
+                LineSeries { id: series_TF_1; name: "实验力 1"; axisX: axisX_TF; axisY: axisY_TF  }
+                LineSeries { id: series_TF_2; name: "实验力 2"; axisX: axisX_TF; axisY: axisY_TF  }
+                LineSeries { id: series_TF_3; name: "实验力 3"; axisX: axisX_TF; axisY: axisY_TF  }
             }
 
             // -------------------------------------------------
@@ -485,12 +505,12 @@ ApplicationWindow {
                 antialiasing: true
                 theme: ChartView.ChartThemeBrownSand
 
-                ValueAxis { id: axisX_TD; min: chartRoot.chartXMin; max: chartRoot.chartXMax; titleText: "时间 (s)" ; tickCount: 5 }
-                ValueAxis { id: axisY_TD; min: 0; max: 1600; titleText: "位移量 (mm)" }
+                ValueAxis { id: axisX_TD; min: chartRoot.chartXMin; max: chartRoot.chartXMax; titleText: "时间 (s)" ; tickCount: 9 }
+                ValueAxis { id: axisY_TD; min: 0; max: 1600; titleText: "位移量 (mm)" ; tickCount: 9 }
 
-                LineSeries { id: series_TD_1; name: "位移 1"; axisX: axisX_TD; axisY: axisY_TD }
-                LineSeries { id: series_TD_2; name: "位移 2"; axisX: axisX_TD; axisY: axisY_TD }
-                LineSeries { id: series_TD_3; name: "位移 3"; axisX: axisX_TD; axisY: axisY_TD }
+                LineSeries { id: series_TD_1; name: "位移 1"; axisX: axisX_TD; axisY: axisY_TD  }
+                LineSeries { id: series_TD_2; name: "位移 2"; axisX: axisX_TD; axisY: axisY_TD  }
+                LineSeries { id: series_TD_3; name: "位移 3"; axisX: axisX_TD; axisY: axisY_TD  }
             }
 
             // -------------------------------------------------
@@ -502,13 +522,13 @@ ApplicationWindow {
                 antialiasing: true
                 theme: ChartView.ChartThemeDark
 
-                ValueAxis { id: axisX_DF; min: 0; max: 1600; titleText: "位移量 (mm)"  ; tickCount: 5}
-                ValueAxis { id: axisY_DF; min: 0; max: 5100; titleText: "实验力 (N)" }
+                ValueAxis { id: axisX_DF; min: 0; max: 1600; titleText: "位移量 (mm)"  ; tickCount: 9}
+                ValueAxis { id: axisY_DF; min: 0; max: 5100; titleText: "实验力 (N)"  ; tickCount: 9}
 
                 // 对应关系: 位移1 vs 力1
-                LineSeries { id: series_DF_1; name: "CH1"; axisX: axisX_DF; axisY: axisY_DF }
-                LineSeries { id: series_DF_2; name: "CH2"; axisX: axisX_DF; axisY: axisY_DF }
-                LineSeries { id: series_DF_3; name: "CH3"; axisX: axisX_DF; axisY: axisY_DF }
+                LineSeries { id: series_DF_1; name: "CH1"; axisX: axisX_DF; axisY: axisY_DF  }
+                LineSeries { id: series_DF_2; name: "CH2"; axisX: axisX_DF; axisY: axisY_DF  }
+                LineSeries { id: series_DF_3; name: "CH3"; axisX: axisX_DF; axisY: axisY_DF  }
             }
         }
 
@@ -531,48 +551,49 @@ ApplicationWindow {
         }
 
         // 🌟 关键修改 2: Tab 切换处理函数 (负责清空并用历史数据重绘)
-        function handleTabSwitch() {
-            var dataList = Cpp_ThreadManager.chartDataModel;
+        function handleTabSwitch() {            
+            // 使用 Qt.callLater 避免在 Layout 切换的同一帧内进行大量绘图操作，防止渲染崩溃
+            Qt.callLater(function(){
+                var dataList = Cpp_ThreadManager.chartDataModel;
 
-            // 1. 确保所有曲线被清空，防止数据残留
-            chartRoot.clearAllSeries();
+                // 1. 先清空所有曲线 (防止残留)
+                chartRoot.clearAllSeries();
 
-            if (!dataList || dataList.length === 0) {
-                // 如果没有数据，确保轴范围正确并返回
-                chartRoot.resetAllAxisLimits();
-                return;
-            }
+                if (!dataList || dataList.length === 0) {
+                    chartRoot.resetAllAxisLimits();
+                    return;
+                }
 
-            // 2. 根据当前选中的 Tab，用历史数据重绘曲线
-            switch (chartTabBar.currentIndex) {
-            case 0: // F-T 曲线
-                // 重绘所有历史数据点
-                updateSeriesFromData(series_TF_1, dataList, "timestampSeconds", "force1");
-                updateSeriesFromData(series_TF_2, dataList, "timestampSeconds", "force2");
-                updateSeriesFromData(series_TF_3, dataList, "timestampSeconds", "force3");
-                break;
+                // 2. 仅重绘当前选中的 Tab
+                switch (chartTabBar.currentIndex) {
+                case 0: // F-T 曲线
+                    updateSeriesFromData(series_TF_1, dataList, "timestampSeconds", "force1");
+                    updateSeriesFromData(series_TF_2, dataList, "timestampSeconds", "force2");
+                    updateSeriesFromData(series_TF_3, dataList, "timestampSeconds", "force3");
+                    break;
 
-            case 1: // S-T 曲线
-                updateSeriesFromData(series_TD_1, dataList, "timestampSeconds", "disp1");
-                updateSeriesFromData(series_TD_2, dataList, "timestampSeconds", "disp2");
-                updateSeriesFromData(series_TD_3, dataList, "timestampSeconds", "disp3");
-                break;
+                case 1: // S-T 曲线
+                    updateSeriesFromData(series_TD_1, dataList, "timestampSeconds", "disp1");
+                    updateSeriesFromData(series_TD_2, dataList, "timestampSeconds", "disp2");
+                    updateSeriesFromData(series_TD_3, dataList, "timestampSeconds", "disp3");
+                    break;
 
-            case 2: // F-S 曲线 (特性曲线)
-                updateSeriesFromData(series_DF_1, dataList, "disp1", "force1");
-                updateSeriesFromData(series_DF_2, dataList, "disp2", "force2");
-                updateSeriesFromData(series_DF_3, dataList, "disp3", "force3");
-                break;
-            }
+                case 2: // F-S 曲线
+                    updateSeriesFromData(series_DF_1, dataList, "disp1", "force1");
+                    updateSeriesFromData(series_DF_2, dataList, "disp2", "force2");
+                    updateSeriesFromData(series_DF_3, dataList, "disp3", "force3");
+                    break;
+                }
 
-            // 3. 调整时间轴范围 (仅在 F-T 和 S-T 曲线时需要根据最新时间调整)
-            if (chartTabBar.currentIndex === 0 || chartTabBar.currentIndex === 1) {
-                var currentTime = dataList[dataList.length - 1].timestampSeconds;
-                adjustAxisX(null, currentTime);
-            } else {
-                // F-S 曲线不需要时间轴滚动，保持固定范围
-                chartRoot.resetAllAxisLimits();
-            }
+                // 3. 调整时间轴
+                if (chartTabBar.currentIndex === 0 || chartTabBar.currentIndex === 1) {
+                    var currentTime = dataList[dataList.length - 1].timestampSeconds;
+                    adjustAxisX(null, currentTime);
+                } else {
+                    chartRoot.resetAllAxisLimits();
+                }
+            });
+
         }
 
         // 🌟 关键修改 3: 辅助函数: 增量更新 LineSeries (增加 NaN/Inf 检查)
@@ -591,66 +612,60 @@ ApplicationWindow {
 
         // 4. JS 函数: 仅更新当前可见的图表
         function updateVisibleChart() {
+
             var dataList = Cpp_ThreadManager.chartDataModel;
-            var fixedRange = 30; // 固定的显示窗口宽度
+            // var fixedRange = 30; // 不需要在这里定义，adjustAxisX 会处理
 
             if (!dataList || dataList.length === 0) {
-                clearAllSeries();
+                // 如果没有数据，不要调用 clear，否则可能死循环或闪烁，直接返回即可
                 return;
             }
 
             // 1. 获取最新数据
             var latestData = dataList[dataList.length - 1];
             var currentTime = latestData.timestampSeconds;
-
-            // ----------------------------------------------------
-            // 2. LineSeries 长度同步裁剪 (替代原有的基于时间的 while 循环)
-            // C++ 端 m_chartDataModel 已经由 MAX_CHART_POINTS 限制了长度。
-            // QML 只需要确保 LineSeries 的长度与其保持一致即可。
-            // ----------------------------------------------------
             var targetLength = dataList.length;
 
-            // 🌟 关键修正：确保 LineSeries 的点数不超过 C++ 模型实际拥有的点数。
-            // 裁剪仅对时间相关的曲线有效 (F-T, S-T)，F-S 曲线不滚动时间，但其最大点数受 MAX_CHART_POINTS 限制。
-            while (series_TF_1.count > targetLength) {
-                // LineSeries.remove(0) 是唯一安全的方法
-                series_TF_1.remove(0); series_TF_2.remove(0); series_TF_3.remove(0);
-                series_TD_1.remove(0); series_TD_2.remove(0); series_TD_3.remove(0);
-                series_DF_1.remove(0); series_DF_2.remove(0); series_DF_3.remove(0);
-                console.log("QML: 裁剪 LineSeries 以匹配 C++ 模型长度 " + targetLength);
-            }
-
-            // ----------------------------------------------------
-            // 3. 轴滚动/固定逻辑 (更新 chartXMin/Max 属性)
-            // ----------------------------------------------------
+            // 2. 轴滚动逻辑
             adjustAxisX(null, currentTime);
 
-            // ----------------------------------------------------
-            // 4. LineSeries 增量更新逻辑 (使用 switch 结构)
-            // C++ 数据模型已经增加了最新点，现在 QML Series 增加这个点。
-            // ----------------------------------------------------
+            // 3. 分情况处理：裁剪旧数据 + 添加新数据
+            // 🌟 核心修复：只对当前 Tab 的 Series 进行 remove 和 append
             switch (chartTabBar.currentIndex) {
-            case 0:
-                // F-T 曲线 (X:时间, Y:力)
+            case 0: // F-T 曲线
+                // 裁剪：确保 QML 曲线长度不大于 C++ 数据长度
+                while (series_TF_1.count >= targetLength && series_TF_1.count > 0) {
+                    series_TF_1.remove(0); series_TF_2.remove(0); series_TF_3.remove(0);
+                }
+                // 添加
                 updateSeries(series_TF_1, latestData, "timestampSeconds", "force1");
                 updateSeries(series_TF_2, latestData, "timestampSeconds", "force2");
                 updateSeries(series_TF_3, latestData, "timestampSeconds", "force3");
                 break;
 
-            case 1:
-                // S-T 曲线 (X:时间, Y:位移)
+            case 1: // S-T 曲线
+                // 裁剪
+                while (series_TD_1.count >= targetLength && series_TD_1.count > 0) {
+                    series_TD_1.remove(0); series_TD_2.remove(0); series_TD_3.remove(0);
+                }
+                // 添加
                 updateSeries(series_TD_1, latestData, "timestampSeconds", "disp1");
                 updateSeries(series_TD_2, latestData, "timestampSeconds", "disp2");
                 updateSeries(series_TD_3, latestData, "timestampSeconds", "disp3");
                 break;
 
-            case 2:
-                // F-S 曲线 (X:位移, Y:力) - 特性曲线
+            case 2: // F-S 曲线
+                // 裁剪
+                while (series_DF_1.count >= targetLength && series_DF_1.count > 0) {
+                    series_DF_1.remove(0); series_DF_2.remove(0); series_DF_3.remove(0);
+                }
+                // 添加
                 updateSeries(series_DF_1, latestData, "disp1", "force1");
                 updateSeries(series_DF_2, latestData, "disp2", "force2");
                 updateSeries(series_DF_3, latestData, "disp3", "force3");
                 break;
             }
+
         }
 
         // 🌟 关键修改 4: 通用工具函数: 将 C++ List 转换为 LineSeries 点 (增加 NaN/Inf 检查)
@@ -718,6 +733,633 @@ ApplicationWindow {
 
     }
 
+    Rectangle{
+        width: 490
+        height: 800
+        color: "gold"
+        anchors.right: root.right
+        anchors.rightMargin: 5
+        anchors.top: root.top
+        anchors.topMargin: 125
+        border.width: 1
+
+        Rectangle{
+            width: 300
+            height: 50
+            color: "transparent"
+            anchors.top: parent.top
+            anchors.topMargin: 10
+            anchors.horizontalCenter: parent.horizontalCenter
+            // border.width: 1
+
+            Text{
+                anchors.centerIn: parent
+                font.pixelSize: 30
+                font.bold: true
+                text: "目标参数"
+            }
+        }
+
+
+        Column{
+            anchors.top: parent.top
+            anchors.topMargin: 70
+            anchors.left: parent.left
+            anchors.leftMargin: 10
+            spacing: 10
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "位移量1:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_端肋设定位置1_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_端肋设定位置1_I",(5300/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.4_端肋1_位置启动",9020,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.4_端肋1_位置启动",9020,false)
+                    }
+                }
+            }
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "位移量2:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_中肋设定位置1_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_中肋设定位置1_I",(5304/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.5_中肋1_位置启动",9021,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.5_中肋1_位置启动",9021,false)
+                    }
+                }
+            }
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "位移量3:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_端肋设定位置2_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_端肋设定位置2_I",(5308/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.6_端肋2_位置启动",9022,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.6_端肋2_位置启动",9022,false)
+                    }
+                }
+            }
+
+
+            Rectangle{
+                width: 100
+                height: 25
+                color: "transparent"
+                // border.width: 1
+            }
+
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "实验力1:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_端肋设定力1_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_端肋设定力1_I",(2500/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.0_端肋1_速度启动",9016,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.0_端肋1_速度启动",9016,false)
+                    }
+                }
+            }
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "实验力2:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_中肋设定力1_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_中肋设定力1_I",(2504/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.1_中肋1_速度启动",9017,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.1_中肋1_速度启动",9017,false)
+                    }
+                }
+            }
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "实验力3:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_端肋设定力2_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_端肋设定力2_I",(2508/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.2_端肋2_速度启动",9018,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.2_端肋2_速度启动",9018,false)
+                    }
+                }
+            }
+
+            Rectangle{
+                width: 100
+                height: 25
+                color: "transparent"
+                // border.width: 1
+            }
+
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "实验力1-速度:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_端肋速度1_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_端肋速度1_I",(7000/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.0_端肋1_速度启动",9016,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.0_端肋1_速度启动",9016,false)
+                    }
+                }
+            }
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "实验力2-速度:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_中肋速度1_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_中肋速度1_I",(7004/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.1_中肋1_速度启动",9017,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.1_中肋1_速度启动",9017,false)
+                    }
+                }
+            }
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "实验力3-速度:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_端肋速度2_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_端肋速度2_I",(7008/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "启 动"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M2.2_端肋2_速度启动",9018,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M2.2_端肋2_速度启动",9018,false)
+                    }
+                }
+            }
+
+            Row{
+                spacing: 10
+
+                Text{
+                    width: 170
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    text: "三端联动速度:"
+                }
+
+                TextField{
+                    width: 120
+                    height: 40
+                    horizontalAlignment: Text.AlignHCenter  // 水平居中
+                    verticalAlignment: Text.AlignVCenter    // 垂直居中
+                    font.pixelSize: 25
+                    placeholderText: plcData["Real_三缸速度1_I"].toFixed(2)
+
+                    onEditingFinished: {
+                        Cpp_ThreadManager.writeRegister32("Real_三缸速度1_I",(7016/2),text)
+                    }
+                }
+
+                Button{
+                    width: 80
+                    height: 40
+                    text: "停止"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M3.4_三端_停止",9028,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M3.4_三端_停止",9028,false)
+                    }
+                }
+                Button{
+                    width: 80
+                    height: 40
+                    text: plcData["M3.6_三端_模式"] === 1 ? "联动" : "独立"
+                    // text: "模式"
+                    font.pixelSize: 20
+
+                    onClicked: {
+                        if(text === "联动")
+                        {
+                           Cpp_ThreadManager.writeCoil("M3.6_三端_模式",9030,false)
+                        }
+                        else
+                        {
+                            Cpp_ThreadManager.writeCoil("M3.6_三端_模式",9030,true)
+                        }
+                    }
+
+                    // onPressed: {
+                    //     Cpp_ThreadManager.writeCoil("M3.6_三端_模式",9030,true)
+                    // }
+                    // onReleased: {
+                    //     Cpp_ThreadManager.writeCoil("M3.6_三端_模式",9030,false)
+                    // }
+                }
+            }
+
+
+            Row{
+                spacing: 10
+
+                Button{
+                    width: 150
+                    height: 40
+                    text: "实验力1停止"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M3.0_端肋1_停止",9024,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M3.0_端肋1_停止",9024,false)
+                    }
+                }
+                Button{
+                    width: 150
+                    height: 40
+                    text: "实验力2停止"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M3.1_中肋1_停止",9025,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M3.1_中肋1_停止",9025,false)
+                    }
+                }
+                Button{
+                    width: 150
+                    height: 40
+                    text: "实验力3停止"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M3.2_端肋2_停止",9026,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M3.2_端肋2_停止",9026,false)
+                    }
+                }
+
+            }
+
+            Row{
+                spacing: 10
+
+                Button{
+                    width: 150
+                    height: 40
+                    text: "实验力1回零"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M4.0_端肋1_回零启动",9032,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M4.0_端肋1_回零启动",9032,false)
+                    }
+                }
+                Button{
+                    width: 150
+                    height: 40
+                    text: "实验力2回零"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M4.1_中肋1_回零启动",9033,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M4.1_中肋1_回零启动",9033,false)
+                    }
+                }
+                Button{
+                    width: 150
+                    height: 40
+                    text: "实验力3回零"
+                    font.pixelSize: 20
+                    onPressed: {
+                        Cpp_ThreadManager.writeCoil("M4.2_端肋2_回零启动",9034,true)
+                    }
+                    onReleased: {
+                        Cpp_ThreadManager.writeCoil("M4.2_端肋2_回零启动",9034,false)
+                    }
+                }
+            }
+
+            Row{
+                spacing: 10
+
+                Button{
+                    width: 150
+                    height: 40
+                    font.pixelSize: 20
+                    text: plcData["M4.4_端肋1_方向"] === 1 ? "实验力1-上" : "实验力1-下"
+
+                    onClicked: {
+                        if(text === "实验力1-上")
+                        {
+                            Cpp_ThreadManager.writeCoil("M4.4_端肋1_方向",9036,false)
+                        }
+                        else{
+                            Cpp_ThreadManager.writeCoil("M4.4_端肋1_方向",9036,true)
+                        }
+                    }
+
+                    // onPressed: {
+                    //     Cpp_ThreadManager.writeCoil("M4.4_端肋1_方向",9036,true)
+                    // }
+                    // onReleased: {
+                    //     Cpp_ThreadManager.writeCoil("M4.4_端肋1_方向",9036,false)
+                    // }
+                }
+                Button{
+                    width: 150
+                    height: 40
+                    text: plcData["M4.5_中肋1_方向"] === 1 ? "实验力2-上" : "实验力2-下"
+                    font.pixelSize: 20
+
+                    onClicked: {
+                        if(text === "实验力2-上")
+                        {
+                            Cpp_ThreadManager.writeCoil("M4.5_中肋1_方向",9037,false)
+                        }
+                        else{
+                            Cpp_ThreadManager.writeCoil("M4.5_中肋1_方向",9037,true)
+                        }
+                    }
+
+                    // onPressed: {
+                    //     Cpp_ThreadManager.writeCoil("M4.5_中肋1_方向",9037,true)
+                    // }
+                    // onReleased: {
+                    //     Cpp_ThreadManager.writeCoil("M4.5_中肋1_方向",9037,false)
+                    // }
+                }
+                Button{
+                    width: 150
+                    height: 40                    
+                    text: plcData["M4.6_端肋2_方向"] === 1 ? "实验力3-上" : "实验力3-下"
+                    font.pixelSize: 20
+
+                    onClicked: {
+                        if(text === "实验力3-上")
+                        {
+                            Cpp_ThreadManager.writeCoil("M4.6_端肋2_方向",9038,false)
+                        }
+                        else{
+                            Cpp_ThreadManager.writeCoil("M4.6_端肋2_方向",9038,true)
+                        }
+                    }
+
+                    // onPressed: {
+                    //     Cpp_ThreadManager.writeCoil("M4.6_端肋2_方向",9038,true)
+                    // }
+                    // onReleased: {
+                    //     Cpp_ThreadManager.writeCoil("M4.6_端肋2_方向",9038,false)
+                    // }
+                }
+            }
+
+        }
+
+    }
 
     Row{
         anchors.bottom: root.bottom
@@ -725,41 +1367,28 @@ ApplicationWindow {
         anchors.right: root.right
         anchors.rightMargin: 5
         width: 370
-        height: 100
+        height: 70
         spacing: 5
 
-        Item{
+        // 🌟 新增：保存曲线图片按钮
+        Button{
             width: 120
-            height: 100
-
-            Button{
-                width: 120
-                height: 45
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.top: parent.top
-                text: "上 移"
-                onPressed: console.log("向上移动 - 按下")
-                onReleased: console.log("向上移动 - 松开")
+            height: 70
+            text: "保存曲线"
+            font.pixelSize: 20
+            onClicked: {
+                saveChartView();
             }
-            Button{
-                width: 120
-                height: 45
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom
-                text: "下 移"
-                onPressed: console.log("向下移动 - 按下")
-                onReleased: console.log("向下移动 - 松开")
-            }
-
         }
 
         Button{
             width: 120
-            height: 100
-            anchors.bottom: parent.bottom
-            text: "开始实验"
+            height: 70
+            // anchors.bottom: parent.bottom
+            text: "开始记录"
+            font.pixelSize: 20
             onClicked: {
-                console.log("开始实验")
+                console.log("开始记录实验数据")
 
                 // 🌟 关键：在 C++ 开始更新数据前，强制轴范围为 0-60
                 chartRoot.resetAllAxisLimits(); // 使用一个新的、更稳定的函数
@@ -770,9 +1399,10 @@ ApplicationWindow {
 
         Button{
             width: 120
-            height: 100
-            anchors.bottom: parent.bottom
-            text: "停止实验"
+            height: 70
+            // anchors.bottom: parent.bottom
+            text: "停止记录"
+            font.pixelSize: 20
             onClicked: {
                 console.log("终止实验")
                 Cpp_ThreadManager.stop_Experiment()
@@ -781,47 +1411,5 @@ ApplicationWindow {
 
     }
 
-
-    Rectangle{
-        width: 490
-        height: 770
-        color: "gold"
-        anchors.right: root.right
-        anchors.rightMargin: 5
-        anchors.top: root.top
-        anchors.topMargin: 125
-        border.width: 1
-
-
-        // Text{
-
-        // }
-
-        // TextField{
-        //     width: 200
-        //     height: 40
-        //     onEditingFinished: {
-        //         console.log("触发写入" + text)
-        //         Cpp_ThreadManager.writeRegister32("TestHold_1",(2000/2),text);
-        //     }
-        // }
-
-        Column{
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 10
-
-            A_TextInput{
-                text:  plcData["TestHold_1"].toFixed(2)
-
-                onEditingFinished: function(value)
-                {
-                    Cpp_ThreadManager.writeRegister32("TestHold_1",(2000/2),value);
-                }
-
-            }
-
-        }
-
-    }
 
 }

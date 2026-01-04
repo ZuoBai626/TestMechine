@@ -40,6 +40,8 @@ ThreadManager::ThreadManager(QObject *parent) : QObject(parent)
     QMetaObject::invokeMethod(m_PLC, "connectToPlc", Qt::QueuedConnection);
 
     // === 关键信号连接 ===
+    // 【关键新增连接】捕获所有写入后的回读更新（无论是否开始实验）
+    connect(m_PLC, &ModbusControl::plcDataChanged,this, &ThreadManager::onPlcDataChangedFromModbus,Qt::QueuedConnection);  // 跨线程安全
     connect(m_PLC, &ModbusControl::connectionStatusChanged, this, &ThreadManager::updateConnectionStatus);
     connect(m_PLC, &ModbusControl::instantDataReady, this, &ThreadManager::handleInstantData);
     connect(m_PLC, &ModbusControl::coilVerificationResultSignal, this, &ThreadManager::updateLastWriteCoilResult);
@@ -97,6 +99,17 @@ void ThreadManager::updateConnectionStatus(bool connected)
         m_isConnected = connected;
         emit isConnectedChanged();
     }
+}
+
+void ThreadManager::onPlcDataChangedFromModbus()
+{
+    // 子线程已经更新了自己的 m_plcData
+    // 我们只需同步到主线程缓存并通知 QML 刷新
+    m_latestPlcData = m_PLC->plcData();  // QVariantMap 是隐式共享的，跨线程读取完全安全
+
+    emit plcDataChanged();  // 通知 QML 属性变更
+
+    qDebug() << "ThreadManager: 收到写入回读更新，已刷新QML（即使未开始实验）";
 }
 
 void ThreadManager::handleInstantData(const QVariantMap& data)

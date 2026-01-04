@@ -76,6 +76,9 @@ private slots:
     void updateLastWriteCoilResult(const QVariant& value);
     void updateConnectionStatus(bool connected);
 
+    // 【新增】转发来自 ModbusControl 的通用数据变更（用于写入后非轮询变量更新）
+    void onPlcDataChangedFromModbus();
+
 private:
     explicit ThreadManager(QObject *parent = nullptr);
     ~ThreadManager();

@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOMOC ON)
 
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Charts Core SerialBus)
+find_package(Qt6 REQUIRED COMPONENTS Quick Charts Core SerialBus Widgets)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
 find_package(Qt6 REQUIRED COMPONENTS Core)
@@ -28,6 +28,8 @@ qt_add_qml_module(Test_Mechine
         QML_FILES SystemParameters.qml
         SOURCES readwritecsv.h readwritecsv.cpp
         QML_FILES A_TextInput.qml
+        QML_FILES A_Button.qml
+        # RESOURCES images/appIcon.ico
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
@@ -46,6 +48,7 @@ target_link_libraries(Test_Mechine
     PRIVATE Qt6::Charts
     PRIVATE Qt6::Core
     PRIVATE Qt6::SerialBus
+    PRIVATE Qt6::Widgets
 )
 target_link_libraries(Test_Mechine PRIVATE Qt6::Core)
 target_link_libraries(Test_Mechine PRIVATE Qt6::Core)
@@ -58,4 +61,7 @@ install(TARGETS Test_Mechine
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-
+if(WIN32)
+    target_sources(Test_Mechine PRIVATE appIcon.rc)
+    set_property(TARGET Test_Mechine PROPERTY WIN32_EXECUTABLE TRUE)
+endif()

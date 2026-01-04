@@ -1,147 +1,176 @@
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Controls.Material
 
 Item {
-    id: styledInput
+    id: root
     width: inputWidth
     height: inputHeight
+    clip: true
 
-    // 基本尺寸属性
-    property real inputWidth: 200
-    property real inputHeight: 50
+    // ==================== 属性 ====================
+    property real inputWidth: 220
+    property real inputHeight: 60
 
-    // 核心功能属性
-    property string text: ""  // 实际存储的文本
-    property bool isEditing: false     // 编辑状态切换
-    property bool isSelected: false    // 选中状态
-    property bool isPassword: false    // 密码模式开关（仅控制是否启用密码模式）
+    property real plcValue: 0.0
+    property int  decimals: 2
+    property real minimumValue: -Infinity
+    property real maximumValue: Infinity
+    property bool allowNegative: true
 
-    // 样式属性（与按钮保持一致）
+    property bool isEditing: false
+
+    // 样式属性
     property string normalColor: "#ffffff"
     property string hoverColor: "#ffffff"
     property string pressedColor: "#f0f8ff"
-    property string selectedColor: "#FFFACD"
-    property string selectedBorderColor: "#FFD700"
-
     property string normalBorderColor: "#bdc3c7"
     property string hoverBorderColor: "#3498db"
-    property string pressedBorderColor: "#3498db"
     property string editingBorderColor: "#3498db"
 
-    // 字体样式
     property real fontPixelSize: 35
     property string fontColor: "#2c3e50"
     property bool fontBold: false
 
-    // 布局样式
     property real borderWidth: 3
     property real borderRadius: 5
-    property real innerPadding: 10  // 统一内边距
+    property real innerPadding: 10
 
-    // 密码模式相关属性（仅保留基础掩码设置）
-    property string passwordMask: "*"  // 密码遮盖字符
+    signal userEditRequested(real newValue)
+    signal editingCompleted(real finalValue)
+    signal editingCanceled()
 
-    // 功能信号
-    signal valueChanged(string newValue)
-    signal editingFinished(string finalValue)
-    signal editCancelled()
-
-    // 背景容器
+    // ==================== 背景 ====================
     Rectangle {
-        id: inputContainer
+        id: container
         anchors.fill: parent
-        radius: borderRadius
-        border.width: borderWidth
-        border.color: isSelected ? selectedBorderColor
-                    : isEditing ? editingBorderColor
-                    : (hoverDetector.hovered ? hoverBorderColor : normalBorderColor)
-        color: isSelected ? selectedColor
-              : isEditing ? pressedColor
-              : (hoverDetector.hovered ? hoverColor : normalColor)
+        radius: root.borderRadius
+        border.width: root.borderWidth
+        border.color: root.isEditing ? root.editingBorderColor
+                    : (mouseArea.containsMouse ? root.hoverBorderColor : root.normalBorderColor)
+        color: root.isEditing ? root.pressedColor
+              : (mouseArea.containsMouse ? root.hoverColor : root.normalColor)
     }
 
-    // 悬停状态检测
-    MouseArea {
-        id: hoverDetector
-        anchors.fill: parent
-        hoverEnabled: true
-        property bool hovered: false
-        onEntered: hovered = true
-        onExited: hovered = false
+    // ==================== 共享 FontMetrics ====================
+    FontMetrics {
+        id: sharedMetrics
+        font.pixelSize: root.fontPixelSize
+        font.bold: root.fontBold
     }
 
-    // 显示模式组件（密码始终以掩码显示）
+    // ==================== 显示文本 ====================
     Text {
         id: displayText
-        visible: !isEditing
-        anchors.fill: parent
-        // 密码模式下始终显示掩码，无切换功能
-        text: isPassword && styledInput.text.length > 0
-              ? passwordMask.repeat(styledInput.text.length)
-              : styledInput.text || "点击输入"
-        font.pixelSize: fontPixelSize
-        font.bold: fontBold
-        color: styledInput.text ? fontColor : "#bdc3c7"
+        width: root.width - 2 * (root.borderWidth + root.innerPadding)
+        height: sharedMetrics.lineSpacing + 2 * root.innerPadding
+        anchors.centerIn: parent
+
+        opacity: root.isEditing ? 0 : 1
+        Behavior on opacity { NumberAnimation { duration: 120 } }
+
+        text: plcValue === 0 ? "点击设置" : Number(plcValue).toLocaleString(Qt.locale(), 'f', decimals)
+        font: sharedMetrics.font
+        color: plcValue !== 0 ? root.fontColor : "#bdc3c7"
+
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
-        padding: innerPadding
         elide: Text.ElideMiddle
-        maximumLineCount: 1
-
-        MouseArea {
-            anchors.fill: parent
-            onClicked: {
-                isEditing = true
-                inputField.text = styledInput.text
-                inputField.forceActiveFocus()
-            }
-        }
     }
 
-    // 输入模式组件（密码始终隐藏）
-    TextField {
-        id: inputField
-        visible: isEditing
-        anchors.fill: parent
-        text: styledInput.text
-        font.pixelSize: fontPixelSize
-        font.bold: fontBold
-        color: fontColor
-        padding: innerPadding
+    // ==================== 输入组件（TextInput） ====================
+    TextInput {
+        id: textInput
+        width: root.width - 2 * (root.borderWidth + root.innerPadding)
+        height: sharedMetrics.lineSpacing + 2 * root.innerPadding
+        anchors.centerIn: parent
+
+        // 始终存在于场景中，只用 opacity 控制视觉
+        visible: true
+        opacity: root.isEditing ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 120 } }
+
+        font: sharedMetrics.font
+        color: root.fontColor
+
         horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        selectionColor: selectedColor
-        selectedTextColor: fontColor
 
-        // 密码模式下始终隐藏输入内容，无切换功能
-        echoMode: isPassword ? TextInput.Password : TextInput.Normal
+        selectionColor: "#FFFACD"
+        selectedTextColor: "#2c3e50"
 
-        background: Rectangle {
-            color: "transparent"
-            border.width: 0
+        validator: RegularExpressionValidator {
+            regularExpression: root.allowNegative
+                ? new RegExp("-?\\d*\\.?\\d{0," + root.decimals + "}")
+                : new RegExp("\\d*\\.?\\d{0," + root.decimals + "}")
         }
 
-        Keys.onEnterPressed: confirmEdit()
-        Keys.onReturnPressed: confirmEdit()
-        Keys.onEscapePressed: cancelEdit()
-        onEditingFinished: confirmEdit()
+        focus: true  // 允许获得焦点
+        cursorVisible: root.isEditing
+
+        Keys.onEnterPressed: root.confirmEdit()
+        Keys.onReturnPressed: root.confirmEdit()
+        Keys.onEscapePressed: root.cancelEdit()
+        onActiveFocusChanged: if (!activeFocus && root.isEditing) root.confirmEdit()
     }
 
-    // 确认编辑
+    // ==================== 父级 MouseArea：仅在非编辑状态下启用（负责首次点击激活） ====================
+    MouseArea {
+        id: mouseArea
+        anchors.fill: parent
+        hoverEnabled: !root.isEditing  // 编辑时禁用悬停检测
+        enabled: !root.isEditing       // 编辑时完全禁用，防止拦截事件
+
+        onClicked: {
+            root.isEditing = true
+            // 延迟确保 opacity 已更新，再激活焦点
+            Qt.callLater(function() {
+                textInput.forceActiveFocus()
+                textInput.text = plcValue.toFixed(decimals)
+                textInput.cursorPosition = textInput.length
+                textInput.selectAll()
+            })
+        }
+    }
+
+    // ==================== TextInput 专用 MouseArea：编辑状态下捕获点击（激活光标） ====================
+    MouseArea {
+        anchors.fill: textInput
+        enabled: root.isEditing
+        propagateComposedEvents: true
+        onPressed: mouse => mouse.accepted = false
+        onReleased: mouse => mouse.accepted = false
+        onClicked: mouse => mouse.accepted = false
+        onDoubleClicked: mouse => mouse.accepted = false
+        onPressAndHold: mouse => mouse.accepted = false
+    }
+
+    // ==================== 确认与取消 ====================
     function confirmEdit() {
-        if (inputField.text !== styledInput.text) {
-            styledInput.text = inputField.text;
-            valueChanged(styledInput.text);
+        if (!root.isEditing) return
+
+        var inputText = textInput.text.trim()
+        if (inputText === "" || inputText === "-" || inputText === ".") {
+            inputText = "0"
         }
-        editingFinished(styledInput.text);
-        isEditing = false;
+
+        var num = parseFloat(inputText)
+        if (isNaN(num) || num < minimumValue || num > maximumValue || (!allowNegative && num < 0)) {
+            textInput.text = plcValue.toFixed(decimals)
+            root.cancelEdit()
+            return
+        }
+
+        var newValue = Number(num.toFixed(decimals))
+        if (Math.abs(newValue - plcValue) > 0.000001) {
+            plcValue = newValue
+            userEditRequested(newValue)
+        }
+
+        editingCompleted(newValue)
+        root.isEditing = false
     }
 
-    // 取消编辑
     function cancelEdit() {
-        inputField.text = styledInput.text;
-        editCancelled();
-        isEditing = false;
+        textInput.text = plcValue.toFixed(decimals)
+        editingCanceled()
+        root.isEditing = false
     }
 }

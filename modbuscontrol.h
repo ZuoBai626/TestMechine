@@ -42,6 +42,9 @@ signals:
     // PLC连接状态变化（true=已连接，false=断开）
     void connectionStatusChanged(bool isConnected);
 
+    // 【新增信号】请求执行一次初始读取（连接成功后发出）
+    void initialReadRequested();
+
 public:
     explicit ModbusControl(QObject *parent = nullptr);
     ~ModbusControl();
@@ -64,6 +67,9 @@ public slots:
 
     // 【外部调用】断开PLC连接（程序退出时由ThreadManager调用）
     void disconnectFromPlc();
+
+    // 【保持为槽函数】执行初始读取（连接信号后会被调用）
+    void performInitialRead();
 
     // 【写入接口】由ThreadManager转发QML请求
     void Modbus_Coils_Write(const QString& qmlKey, int address, bool value);
@@ -98,6 +104,11 @@ private:
     QPair<quint16, quint16> int32ToUint16Pair(qint32 value, RegisterOrder order);
     qint16 parseModbusInt16(const QModbusDataUnit& unit, int offset);
 
+    void handleInitialReply(QModbusReply* reply);
+    void readNonPollingItemsSequentially();
+    void readNextNonPollingItem(const QVector<PlcItem>& items, int index);
+    void finishInitialRead();
+
     // --- 成员变量 ---
     QModbusTcpClient* m_PLC = nullptr;                    // Modbus TCP客户端实例
     QTimer* m_readTimer = nullptr;                        // 轮询定时器（默认50ms，即20Hz）
@@ -106,6 +117,7 @@ private:
     bool m_isReading = false;                             // 是否正在进行一轮读取（防止重入）
     QVariantMap m_plcData;                                // 子线程维护的最新PLC数据缓存
     qint64 m_cycleCount = 0;                              // 轮询周期计数器，用于生成相对时间戳
+    QVector<QVector<PlcItem>> m_initialReadQueue;         // 专门用于初始读取的批次队列（包含所有变量）
 };
 
 #endif // MODBUSCONTROL_H
